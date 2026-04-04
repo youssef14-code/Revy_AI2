@@ -10,12 +10,10 @@ SYSTEM_PROMPT = """You are a router. Read the user message and decide which agen
 
 Agents:
 - hr        → employee info, leave requests, HR policies, payroll
-- sales     → products, pricing, quotes, offers
 - support   → complaints, tickets, returns, warranty
 
 Reply with ONE word only:
 hr
-sales
 support"""
 
 
@@ -30,7 +28,7 @@ def supervisor_node(state: AgentState) -> AgentState:
     next_agent = response.content.strip().lower()
 
     # validation - لو الـ LLM رجع حاجة غلط
-    if next_agent not in ["hr", "sales", "support"]:
+    if next_agent not in ["hr", "support"]:
         next_agent = "support"
 
     print(f"[Supervisor] → {next_agent}")

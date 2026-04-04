@@ -55,3 +55,15 @@ class Appointment(db.Model):
 
     # Relationship
     user = db.relationship("User", back_populates="appointments" )
+# -------------------------
+# Jobs Table
+# -------------------------
+class Job(db.Model):
+    __tablename__ = "jobs"
+
+    id           = db.Column(db.Integer, primary_key=True)
+    job_name     = db.Column(db.String(120), nullable=False)
+    description  = db.Column(db.Text, nullable=False)
+    is_available = db.Column(db.Boolean, default=True, nullable=False)
+
+    
