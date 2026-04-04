@@ -1,5 +1,5 @@
 import chromadb
-from retrival.embeddings import EmbeddingModel
+from embeddings import EmbeddingModel
 from functools import lru_cache
 
 CHROMA_DIR = "chroma_db"        # ← فوق
