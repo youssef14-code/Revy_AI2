@@ -9,9 +9,8 @@ llm = ChatOllama(model="llama3", temperature=0)
 SYSTEM_PROMPT = """You are a router. Read the user message and decide which agent should handle it.
 
 Agents:
-- hr        → employee info, leave requests, HR policies, payroll
-- sales     → products, pricing, quotes, offers
-- support   → complaints, tickets, returns, warranty
+- hr       → jobs, hiring, careers, vacancies
+- sales_cs → pricing, services, booking, company info, who are you
 
 Reply with ONE word only:
 hr
@@ -30,8 +29,8 @@ def supervisor_node(state: AgentState) -> AgentState:
     next_agent = response.content.strip().lower()
 
     # validation - لو الـ LLM رجع حاجة غلط
-    if next_agent not in ["hr", "sales", "support"]:
-        next_agent = "support"
+    if next_agent not in ["hr", "sales_cs"]:
+        next_agent = "sales_cs"
 
     print(f"[Supervisor] → {next_agent}")
 
