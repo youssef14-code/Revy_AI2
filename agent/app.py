@@ -3,7 +3,17 @@ from models.models import Job,Appointment,User,db
 import os
 
 app = Flask(__name__)
+<<<<<<< HEAD
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///revy.db'
+=======
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, "..", "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+
+DB_PATH = os.path.join(INSTANCE_DIR, "revy.db")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
+>>>>>>> abdo
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
