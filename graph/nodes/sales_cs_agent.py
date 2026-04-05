@@ -7,7 +7,7 @@ from langchain_core.messages import SystemMessage, AIMessage
 from langchain_ollama import ChatOllama
 from state.state import AgentState
 
-llm = ChatOllama(model="llama3", temperature=0)
+llm = ChatOllama(model="llama3.2", temperature=0)
 
 SYSTEM_PROMPT = """You are RevyAI, an enterprise-grade AI assistant representing RevyAI, a business-first AI automation company.
 

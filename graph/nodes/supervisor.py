@@ -1,40 +1,80 @@
-# graph/nodes/supervisor.py
+# graph/nodes/intent_node.py
 
-from langchain_core.messages import SystemMessage, HumanMessage
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+import json
+import re
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 from state.state import AgentState
 
-llm = ChatOllama(model="llama3", temperature=0)
+llm = ChatOllama(model="llama3.2", temperature=0)
 
-SYSTEM_PROMPT = """You are a router. Read the user message and decide which agent should handle it.
+SYSTEM_PROMPT = """You are an intent classifier for RevyAI, a business AI automation company.
+Analyze the user message and return JSON only (no extra text) in this format:
+{
+  "intent": "hr | sales | cs | booking | greeting | other",
+  "lead_info": {
+    "name": "<customer name or null>",
+    "phone": "<phone number or null>",
+    "day": "<preferred day or null>",
+    "time": "<preferred time or null>",
+    "topic": "<meeting topic or null>"
+  }
+}
 
-Agents:
-- hr       → jobs, hiring, careers, vacancies
-- sales_cs → pricing, services, booking, company info, who are you
+Intent definitions:
+- hr: jobs, hiring, careers, vacancies, working at RevyAI
+- sales: pricing, AI solutions, negotiation, business needs
+- cs: company info, services, who are you, what do you do
+- booking: wants to book a meeting or demo (e.g. "I want to book", "schedule a call")
+- greeting: general greeting or small talk
+- other: anything unrelated
 
-Reply with ONE word only:
-hr
-sales
-support"""
+Rules:
+- Always return valid JSON only, no extra text
+- If unsure, default to "cs"
+- User may write in Arabic, English, or mixed — understand all"""
 
 
-def supervisor_node(state: AgentState) -> AgentState:
-    user_message = state["messages"][-1].content
+def intent_node(state: AgentState) -> AgentState:
+    message = state["messages"][-1].content
 
-    response = llm.invoke([
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=user_message)
-    ])
+    # ضيف الـ summary كـ context لو موجود
+    summary = state.get("summary", "")
+    system = SYSTEM_PROMPT
+    if summary:
+        system += f"\n\nPrevious conversation summary:\n{summary}"
 
-    next_agent = response.content.strip().lower()
+    messages = [
+        SystemMessage(content=system),
+        HumanMessage(content=message)
+    ]
 
-    # validation - لو الـ LLM رجع حاجة غلط
-    if next_agent not in ["hr", "sales_cs"]:
-        next_agent = "sales_cs"
+    try:
+        response = llm.invoke(messages)
+        raw = response.content.strip()
+        match = re.search(r"\{.*\}", raw, re.DOTALL)
+        data = json.loads(match.group()) if match else {}
+    except Exception:
+        data = {}
 
-    print(f"[Supervisor] → {next_agent}")
+    intent = data.get("intent", "cs")
+    if intent not in ["hr", "sales", "cs", "booking", "greeting", "other"]:
+        intent = "cs"
+
+    # دمج الـ lead info مع اللي موجود
+    lead_info = data.get("lead_info", {})
+    existing_lead = state.get("lead", {})
+    for key in ["name", "phone", "day", "time", "topic"]:
+        if lead_info.get(key):
+            existing_lead[key] = lead_info[key]
+
+    print(f"[Intent Node] intent={intent} | lead={existing_lead}")
 
     return {
         **state,
-        "next_agent": next_agent
+        "intent": intent,
+        "lead": existing_lead
     }
