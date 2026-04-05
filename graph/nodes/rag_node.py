@@ -16,7 +16,7 @@ def rag_node(state: AgentState) -> AgentState:
     context = retriever.search(user_message, top_k=2)
 
     print(f"[RAG] context retrieved ✅")
-
+    print(f"[RAG] Full context:\n{context}\n")  # ← غيّر دي
     return {
         **state,
         "rag_context": context
