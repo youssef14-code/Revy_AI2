@@ -4,7 +4,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_ollama import ChatOllama
 from state.state import AgentState
 
-llm = ChatOllama(model="llama3", temperature=0)
+llm = ChatOllama(model="llama3.2", temperature=0)
 
 SYSTEM_PROMPT = """You are a router. Read the user message and decide which agent should handle it.
 

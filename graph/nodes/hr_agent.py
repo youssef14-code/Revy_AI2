@@ -1,7 +1,6 @@
 # graph/nodes/hr_agent.py
 
 import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from langchain_core.messages import SystemMessage, AIMessage
 from langchain_core.tools import tool
@@ -9,11 +8,10 @@ from langchain_ollama import ChatOllama
 from state.state import AgentState
 
 # ── import الـ Flask app والـ models ──
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from agent.app import app
 from models.models import Job
 
-llm = ChatOllama(model="llama3", temperature=0)
+llm = ChatOllama(model="llama3.2", temperature=0)
 
 
 # ── Tool: جيب الوظايف من الـ DB ──

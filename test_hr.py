@@ -1,7 +1,7 @@
 # test_hr.py
 
 import sys, os
-sys.path.append(os.path.dirname(__file__))
+
 
 from langchain_core.messages import HumanMessage
 from state.state import AgentState
