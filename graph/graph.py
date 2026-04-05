@@ -36,7 +36,7 @@ def build_graph():
         route,
         {
             "hr": "hr",
-            "sales_cs": "rag"  # Sales & CS محتاج RAG الأول
+            "sales_cs": "sales_cs"  # Sales & CS محتاج RAG الأول
         }
     )
 
