@@ -18,7 +18,6 @@ while True:
         "messages": [HumanMessage(content=msg)],
         "next_agent": "",
         "rag_context": "",
-        "intent": None,
         "lead": {},
         "summary": ""
     })
