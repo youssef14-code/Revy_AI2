@@ -6,11 +6,21 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from langchain_core.messages import SystemMessage, AIMessage
 from langchain_ollama import ChatOllama
 from state.state import AgentState
+from tools.tools import create_rag_tool
+from langchain_openai import ChatOpenAI
 
-llm = ChatOllama(model="llama3", temperature=0)
+llm = ChatOpenAI(
+    model="google/gemini-3-flash-preview",
+    temperature=0,
+    base_url="https://openrouter.ai/api/v1",
+    api_key="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",
+    max_tokens=1500
+)
 
-SYSTEM_PROMPT = """You are RevyAI, an enterprise-grade AI assistant representing RevyAI, a business-first AI automation company.
 
+
+SYSTEM_PROMPT = """
+You are RevyAI, an enterprise-grade AI assistant representing RevyAI, a business-first AI automation company.
 
 Your role is to provide clear, professional, and policy-compliant responses based on the provided knowledge base and defined operational rules.
 You must strictly follow all behavioral, technical, and communication constraints defined below.
@@ -107,8 +117,7 @@ RESPONSE STYLE
 - No hype or exaggerated marketing claims
 - No assumptions beyond available knowledge
 
--After every response, append a JSON block like this:
--<summary>one sentence summary here</summary>
+
 
 ====================
 LANGUAGE RULE
@@ -120,18 +129,44 @@ If the user writes in English, respond in English.
 
 
 def sales_cs_agent_node(state: AgentState) -> AgentState:
-    user_message = state["messages"][-1].content
-    context = state["rag_context"]
+    summary = state.get("summary", "")
+    rag_tool = create_rag_tool()
+    llm_with_tools = llm.bind_tools([rag_tool])
+
 
     messages = [
-        SystemMessage(content=SYSTEM_PROMPT.format(context=context)),
+        SystemMessage(content=SYSTEM_PROMPT.format(
+            
+            summary=summary
+        )),
         *state["messages"]
     ]
 
-    response = llm.invoke(messages)
+    response = llm_with_tools.invoke(messages)
     print(f"[Sales & CS Agent] responded ✅")
+    if getattr(response, "tool_calls", None):
+        for tool_call in response.tool_calls:
+             print(f"🔧 Tool used: {tool_call['name']}")
 
-    return {
-        **state,
-        "messages": [AIMessage(content=response.content)]
-    }
+             if tool_call["name"] == "query_knowledge_base":
+                  tool_result = rag_tool.invoke(tool_call["args"])
+
+                   # ابعت الـ result للـ LLM عشان يرد
+                  messages.append(response)
+                  messages.append({
+                       "role": "tool",
+                       "tool_call_id": tool_call["id"],
+                       "content": tool_result
+                  })
+                  print(tool_result)
+                  print(f"📄 Tool result length: {len(tool_result)} chars")
+                  
+                  second_response = llm_with_tools.invoke(messages)
+                  reply = second_response.content.strip()
+
+                  print(f"[Sales & CS Agent] RAG responded ✅")
+                  return {**state, "messages": [AIMessage(content=reply)]}
+    print(f"[Sales & CS Agent] responded ✅")
+    return {**state, "messages": [AIMessage(content=response.content)]}
+
+

@@ -6,7 +6,7 @@ from chunker import build_chunks
 from embeddings import EmbeddingModel
 
 # ---------- CONFIG ----------
-PDF_PATH = r"C:C:\Users\Lenovo\Desktop\Revy_AI2\retrival\AI Agent Knowledge Base.pdf"
+PDF_PATH = r"C:\Users\Lenovo\OneDrive - Alexandria National University\Desktop\Revy_AI2\retrival\AI Agent Knowledge Base.pdf"
 SOURCE_NAME = "AI Agent Knowledge Base"
 
 CHROMA_DIR = "chroma_db"

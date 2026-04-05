@@ -85,6 +85,7 @@ def build_chunks(text: str, source: str):
             internal_title = extract_internal_title(sec["text"])
 
             chunk_text = (
+                f"Section: {sec['section_title']}\n"
                 f"{internal_title}\n\n"
                 f"{sec['text']}"
             )
