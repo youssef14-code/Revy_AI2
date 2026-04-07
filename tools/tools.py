@@ -6,6 +6,7 @@ def create_booking_tool(user):  # ← رجّع user هنا
     
     @tool
     def book_appointment(
+        name: str,
         day: str,        # ← بدل appointment_date
         time: str,       # ← ضيف time
         phone_number: str,
@@ -17,7 +18,7 @@ def create_booking_tool(user):  # ← رجّع user هنا
         Fields needed: day, time, phone_number, and optionally description (e.g. 'AI Agent consultation', 'Business meeting').
         """
         result = BookingService.book(
-            user=user,         # ← ضيف user
+            name=name,          # ← ضيف user
             day=day,
             time=time,
             phone_number=phone_number,

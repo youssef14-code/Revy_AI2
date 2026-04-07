@@ -5,21 +5,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from langchain_core.messages import SystemMessage, AIMessage
 from langchain_ollama import ChatOllama
-from state.state import AgentState
-from tools.tools import create_rag_tool
+from graph.state import AgentState
+from retrival.retriever import RetrievalService 
 from langchain_openai import ChatOpenAI
+import re
 
-<<<<<<< HEAD
-llm = ChatOllama(model="llama3.2", temperature=0)
-=======
 llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
+    api_key="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",
     max_tokens=1500
 )
->>>>>>> 7b90e73cd77df491ebe55d22b9e137ba5b1bc4e0
 
 
 
@@ -106,7 +103,7 @@ Maintenance & Evolution:
 ====================
 RAG & KNOWLEDGE BASE USAGE
 ====================
-- You MUST call the search_knowledge_base tool for ANY question about services, capabilities, pricing, or company information. Never answer these from memory.
+
 - Use retrieved content as contextual grounding only
 - Do NOT mention PDFs, documents, files, embeddings, or vector databases
 - Present information as organizational knowledge
@@ -121,6 +118,14 @@ RESPONSE STYLE
 - No hype or exaggerated marketing claims
 - No assumptions beyond available knowledge
 
+====================
+SUMMARY TASK
+====================
+After your response, append a summary section like this:
+
+<SUMMARY>
+short summary of the conversation in 2-3 lines
+</SUMMARY>
 
 
 ====================
@@ -132,45 +137,37 @@ If the user writes in English, respond in English.
 """
 
 
+
 def sales_cs_agent_node(state: AgentState) -> AgentState:
+    user_message = state["messages"][-1].content
     summary = state.get("summary", "")
-    rag_tool = create_rag_tool()
-    llm_with_tools = llm.bind_tools([rag_tool])
+
+    # RAG مباشرة
+    context = RetrievalService().search(user_message)
+    print(f"📄 RAG context: {len(context)} chars")
 
 
     messages = [
-        SystemMessage(content=SYSTEM_PROMPT.format(
-            
-            summary=summary
-        )),
+        SystemMessage(content=SYSTEM_PROMPT + f"\n\nContext:\n{context}\n\nPrevious summary:\n{summary}"),
         *state["messages"]
-    ]
+        
+        ]
+    
 
-    response = llm_with_tools.invoke(messages)
+    response = llm.invoke(messages)
+    raw = response.content.strip()
+
+# استخرج الـ summary
+    summary_match = re.search(r"<SUMMARY>(.*?)</SUMMARY>", raw, re.DOTALL)
+    new_summary = summary_match.group(1).strip() if summary_match else ""
+
+# الرد بدون الـ summary
+    reply = re.sub(r"<SUMMARY>.*?</SUMMARY>", "", raw, flags=re.DOTALL).strip()
+    print("🔍 Searching knowledge base...")
     print(f"[Sales & CS Agent] responded ✅")
-    if getattr(response, "tool_calls", None):
-        for tool_call in response.tool_calls:
-             print(f"🔧 Tool used: {tool_call['name']}")
-
-             if tool_call["name"] == "query_knowledge_base":
-                  tool_result = rag_tool.invoke(tool_call["args"])
-
-                   # ابعت الـ result للـ LLM عشان يرد
-                  messages.append(response)
-                  messages.append({
-                       "role": "tool",
-                       "tool_call_id": tool_call["id"],
-                       "content": tool_result
-                  })
-                  print(tool_result)
-                  print(f"📄 Tool result length: {len(tool_result)} chars")
-                  
-                  second_response = llm_with_tools.invoke(messages)
-                  reply = second_response.content.strip()
-
-                  print(f"[Sales & CS Agent] RAG responded ✅")
-                  return {**state, "messages": [AIMessage(content=reply)]}
-    print(f"[Sales & CS Agent] responded ✅")
-    return {**state, "messages": [AIMessage(content=response.content)]}
-
-
+    print(f"🔢 Tokens: input={response.usage_metadata['input_tokens']} | output={response.usage_metadata['output_tokens']} | total={response.usage_metadata['total_tokens']}")
+    return {
+    **state,
+    "messages": [AIMessage(content=reply)],
+    "summary": new_summary      # ← احفظ الـ summary في الـ state
+}
