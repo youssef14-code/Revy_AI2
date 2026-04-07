@@ -3,7 +3,7 @@
 import json, re
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_ollama import ChatOllama
-from state.state import AgentState
+from graph.state import AgentState
 
 llm = ChatOllama(model="llama3.2", temperature=0)
 
@@ -34,7 +34,7 @@ Intent rules:
 
 
 def intent_node(state: AgentState) -> AgentState:
-    message = state["messages"][-1].content
+    user_message = state["messages"][-1].content
 
     try:
         response = llm.invoke([
