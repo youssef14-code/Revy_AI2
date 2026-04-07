@@ -1,9 +1,8 @@
 from flask import  Flask, request, jsonify, render_template
-from models.models import Job,Appointment,Client,db 
+from models.models import Job,Appointment,User,db 
 import os
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///revy.db'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCE_DIR = os.path.join(BASE_DIR, "..", "instance")
 os.makedirs(INSTANCE_DIR, exist_ok=True)
