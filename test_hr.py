@@ -4,7 +4,7 @@ import sys, os
 
 
 from langchain_core.messages import HumanMessage
-from state.state import AgentState
+from graph import AgentState
 from graph.nodes.hr_agent import hr_agent_node
 
 # state تجريبي

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HR Jobs Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --border: #2e2e2e;
+    --accent: #c8f04c;
+    --accent-dim: rgba(200,240,76,0.12);
+    --text: #f0ede6;
+    --text-muted: #6b6b6b;
+    --text-mid: #a0a0a0;
+    --danger: #ff5f5f;
+    --danger-dim: rgba(255,95,95,0.1);
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 32px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .header-meta {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ── Layout ── */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 48px;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+  }
+
+  .page-title small {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0f0f0f;
+  }
+
+  .btn-primary:hover { background: #d4f55e; transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .btn-danger {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid transparent;
+  }
+
+  .btn-danger:hover { border-color: var(--danger); }
+
+  /* ── Filter bar ── */
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .filter-btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    color: var(--text);
+  }
+
+  .stat-value.accent { color: var(--accent); }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .job-name {
+    font-weight: 500;
+    font-size: 15px;
+  }
+
+  .job-desc {
+    color: var(--text-mid);
+    font-size: 13px;
+    max-width: 380px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .badge-available {
+    background: rgba(200,240,76,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(200,240,76,0.25);
+  }
+
+  .badge-available:hover { background: rgba(200,240,76,0.2); }
+
+  .badge-closed {
+    background: rgba(255,95,95,0.1);
+    color: var(--danger);
+    border: 1px solid rgba(255,95,95,0.2);
+  }
+
+  .badge-closed:hover { background: rgba(255,95,95,0.18); }
+
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ── Actions ── */
+  .actions { display: flex; gap: 8px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    margin-bottom: 24px;
+  }
+
+  .field { margin-bottom: 18px; }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  .field input, .field textarea, .field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  .field input:focus, .field textarea:focus, .field select:focus {
+    border-color: var(--accent);
+  }
+
+  .field select option { background: var(--surface); }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  /* ── Empty ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s;
+    z-index: 200;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Revy <span>HR</span></div>
+  <div class="header-meta">Jobs Management</div>
+</header>
+
+<main>
+  <div class="topbar">
+    <div class="page-title">
+      Jobs
+      <small>Manage positions and availability</small>
+    </div>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Add Job</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Jobs</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Available</div>
+      <div class="stat-value accent" id="stat-available">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Closed</div>
+      <div class="stat-value" id="stat-closed">—</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('available', this)">Available</button>
+    <button class="filter-btn" onclick="setFilter('closed', this)">Closed</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Job Title</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody">
+        <tr><td colspan="5" class="empty">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add Job</div>
+    <input type="hidden" id="modal-id"/>
+    <div class="field">
+      <label>Job Title</label>
+      <input type="text" id="modal-name" placeholder="e.g. Software Engineer"/>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="modal-desc" rows="4" placeholder="Job description..."></textarea>
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="modal-status">
+        <option value="true">Available</option>
+        <option value="false">Closed</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveJob()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let allJobs = [];
+  let currentFilter = 'all';
+
+  async function loadJobs() {
+    try {
+      const res = await fetch('/jobs');
+      allJobs = await res.json();
+      updateStats();
+      renderTable();
+    } catch {
+      document.getElementById('jobs-tbody').innerHTML =
+        '<tr><td colspan="5" class="empty">Could not load jobs. Is the server running?</td></tr>';
+    }
+  }
+
+  function updateStats() {
+    const available = allJobs.filter(j => j.is_available).length;
+    document.getElementById('stat-total').textContent     = allJobs.length;
+    document.getElementById('stat-available').textContent = available;
+    document.getElementById('stat-closed').textContent    = allJobs.length - available;
+  }
+
+  function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderTable();
+  }
+
+  function renderTable() {
+    const jobs = allJobs.filter(j => {
+      if (currentFilter === 'available') return j.is_available;
+      if (currentFilter === 'closed')    return !j.is_available;
+      return true;
+    });
+
+    const tbody = document.getElementById('jobs-tbody');
+    if (!jobs.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty">No jobs found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = jobs.map(j => `
+      <tr>
+        <td style="color:var(--text-muted);font-size:12px">${j.id}</td>
+        <td><div class="job-name">${j.job_name}</div></td>
+        <td><div class="job-desc">${j.description}</div></td>
+        <td>
+          <button class="badge ${j.is_available ? 'badge-available' : 'badge-closed'}"
+                  onclick="toggleAvailability(${j.id}, ${j.is_available})">
+            <span class="dot"></span>
+            ${j.is_available ? 'Available' : 'Closed'}
+          </button>
+        </td>
+        <td>
+          <div class="actions">
+            <button class="btn btn-ghost" style="padding:7px 14px;font-size:12px"
+                    onclick="openEditModal(${j.id})">Edit</button>
+            <button class="btn btn-danger" style="padding:7px 14px;font-size:12px"
+                    onclick="deleteJob(${j.id})">Delete</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function toggleAvailability(id, current) {
+    await fetch(`/jobs/${id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({is_available: !current})
+    });
+    showToast(current ? 'Job closed.' : 'Job is now available.');
+    loadJobs();
+  }
+
+  function openAddModal() {
+    document.getElementById('modal-title').textContent = 'Add Job';
+    document.getElementById('modal-id').value   = '';
+    document.getElementById('modal-name').value = '';
+    document.getElementById('modal-desc').value = '';
+    document.getElementById('modal-status').value = 'true';
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function openEditModal(id) {
+    const job = allJobs.find(j => j.id === id);
+    document.getElementById('modal-title').textContent    = 'Edit Job';
+    document.getElementById('modal-id').value             = job.id;
+    document.getElementById('modal-name').value           = job.job_name;
+    document.getElementById('modal-desc').value           = job.description;
+    document.getElementById('modal-status').value         = job.is_available ? 'true' : 'false';
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  async function saveJob() {
+    const id   = document.getElementById('modal-id').value;
+    const data = {
+      job_name:     document.getElementById('modal-name').value.trim(),
+      description:  document.getElementById('modal-desc').value.trim(),
+      is_available: document.getElementById('modal-status').value === 'true'
+    };
+
+    if (!data.job_name || !data.description) {
+      showToast('Please fill all fields.'); return;
+    }
+
+    if (id) {
+      await fetch(`/jobs/${id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      showToast('Job updated ✅');
+    } else {
+      await fetch('/jobs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      showToast('Job added ✅');
+    }
+
+    closeModal();
+    loadJobs();
+  }
+
+  async function deleteJob(id) {
+    if (!confirm('Delete this job?')) return;
+    await fetch(`/jobs/${id}`, { method: 'DELETE' });
+    showToast('Job deleted.');
+    loadJobs();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  loadJobs();
+</script>
+</body>
+</html>

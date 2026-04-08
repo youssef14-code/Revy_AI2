@@ -9,7 +9,7 @@ def get_model():
     return SentenceTransformer(MODEL_NAME)
 class EmbeddingModel:
     def __init__(self):
-        self.model = SentenceTransformer(MODEL_NAME)
+        self.model = get_model()
 
     def embed_documents(self, texts):
         texts = [f"passage: {t}" for t in texts]
@@ -25,3 +25,7 @@ class EmbeddingModel:
             [query],
             normalize_embeddings=True
         )[0]
+    
+@lru_cache(maxsize=1)
+def get_embedding_model():
+    return EmbeddingModel()
