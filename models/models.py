@@ -46,8 +46,8 @@ class Appointment(db.Model):
         default=lambda: datetime.now(egypt_tz)
     )
 
-    # Foreign Key → clients.id
-    user_id = db.Column(
+    # Foreign Key → users.id
+    client_id = db.Column(
         db.Integer,
         db.ForeignKey("clients.id"),
         nullable=False

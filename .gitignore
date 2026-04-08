@@ -1,0 +1,27 @@
+# Environment
+revy/
+.revy
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Database
+instance/
+*.db
+*.sqlite3
+
+# Chroma Vector DB
+chroma_db/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/

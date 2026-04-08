@@ -4,12 +4,11 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from langgraph.graph import StateGraph, END
-from graph.state import AgentState
-from graph.nodes.supervisor import intent_node
-from graph.nodes.rag_node import rag_node
+from state.state import AgentState
+from graph.nodes.supervisor import supervisor_node
 from graph.nodes.hr_agent import hr_agent_node
 from graph.nodes.sales_cs_agent import sales_cs_agent_node
-
+from graph.nodes.direct_node import direct_node
 
 
 def route(state: AgentState) -> str:
@@ -19,33 +18,25 @@ def route(state: AgentState) -> str:
 def build_graph():
     graph = StateGraph(AgentState)
 
-    # Nodes
-    graph.add_node("supervisor", intent_node)
-    graph.add_node("rag", rag_node)
-    graph.add_node("hr", hr_agent_node)
+    graph.add_node("supervisor", supervisor_node)
+    graph.add_node("direct", direct_node)
     graph.add_node("sales_cs", sales_cs_agent_node)
-    
+    graph.add_node("hr", hr_agent_node)
 
-    # Entry point
     graph.set_entry_point("supervisor")
 
-
-    # Supervisor يقرر مين
     graph.add_conditional_edges(
         "supervisor",
         route,
         {
             "hr": "hr",
-            "sales_cs": "sales_cs"  # Sales & CS محتاج RAG الأول
+            "direct": "direct",
+            "sales_cs": "sales_cs"
         }
     )
 
-    # HR مش محتاج RAG يروح للـ END مباشرة
     graph.add_edge("hr", END)
-
-    # RAG بعدين Sales & CS
-    graph.add_edge("rag", "sales_cs")
+    graph.add_edge("direct", END)
     graph.add_edge("sales_cs", END)
-
 
     return graph.compile()

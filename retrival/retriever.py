@@ -1,6 +1,7 @@
 import chromadb
-from embeddings import EmbeddingModel
+from retrival.embeddings import EmbeddingModel
 from functools import lru_cache
+from retrival.embeddings import get_embedding_model
 
 CHROMA_DIR = "chroma_db"        # ← فوق
 COLLECTION_NAME = "ai_agent_kb"  # ← فوق
@@ -13,7 +14,7 @@ def get_collection():
 class RetrievalService:
     def __init__(self):
         self.collection = get_collection()  # ← من الـ cache
-        self.embedder = EmbeddingModel()
+        self.embedder = get_embedding_model()
 
     def search(self, query: str, top_k: int = 2) -> str:
         embedding = self.embedder.embed_query(query)
