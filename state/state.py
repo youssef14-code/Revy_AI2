@@ -4,8 +4,17 @@ import operator
 
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], operator.add]
-    next_agent: str
-    rag_context: str
     
-    lead: Dict[str, Any]
+    # Routing
+    next_agent: str
+    intent: Optional[str]
+    refined_query: Optional[str]
+    
+    # RAG
+    rag_context: Optional[str]
+    
+    # Lead info
+    lead: Optional[Dict[str, Any]]
+    
+    # Memory
     summary: Optional[str]

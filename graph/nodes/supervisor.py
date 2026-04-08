@@ -2,15 +2,25 @@
 
 import json, re
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_ollama import ChatOllama
 from state.state import AgentState
+from langchain_openai import ChatOpenAI
 
-llm = ChatOllama(model="llama3", temperature=0)
+llm = ChatOpenAI(
+    model="google/gemini-3-flash-preview",
+    temperature=0,
+    base_url="https://openrouter.ai/api/v1",
+    api_key="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",
+    max_tokens=1500
+)
 
-SYSTEM_PROMPT = """You are a router for RevyAI. Analyze the user message and return JSON only:
+SYSTEM_PROMPT = """
+You are a routing assistant for RevyAI.
+Analyze the user message and return JSON only — no explanation, no markdown.
+
 {
-  "next_agent": "hr | sales_cs",
+  "next_agent": "hr | sales_cs | direct",
   "intent": "hr | sales | cs | booking | greeting | other",
+  "refined_query": "<string or null>",
   "lead_info": {
     "name": "<or null>",
     "phone": "<or null>",
@@ -20,17 +30,42 @@ SYSTEM_PROMPT = """You are a router for RevyAI. Analyze the user message and ret
   }
 }
 
-Routing rules:
+====================
+ROUTING RULES
+====================
 - hr: jobs, hiring, careers, vacancies
-- sales_cs: everything else (pricing, services, booking, company info)
+- sales_cs: pricing, services, booking, company info, AI solutions
+- direct: greetings, small talk, unrelated topics
 
-Intent rules:
+====================
+INTENT RULES
+====================
 - hr: jobs related
 - sales: pricing, negotiation, AI solutions
 - cs: company info, who are you, what do you do
 - booking: wants to book a meeting
-- greeting: hi, hello
-- other: unrelated"""
+- greeting: hi, hello, how are you
+- other: unrelated or out of scope
+
+====================
+REFINED QUERY RULES
+====================
+- Only fill if next_agent is sales_cs AND intent is NOT greeting or other
+- Convert user message to a clear English search query for RAG retrieval
+- Examples:
+  - "ليه اسعاركو غاليه" → "RevyAI pricing cost value justification"
+  - "بتقدموا ايه" → "RevyAI services offerings solutions"
+  - "كيف تعملون" → "RevyAI how it works process methodology"
+- Otherwise → null
+
+====================
+LEAD INFO RULES
+====================
+- Extract only if explicitly mentioned by the user
+- Never assume or fabricate values
+- If not mentioned → null
+"""
+
 
 
 def supervisor_node(state: AgentState) -> AgentState:
@@ -47,12 +82,17 @@ def supervisor_node(state: AgentState) -> AgentState:
     except Exception:
         data = {}
 
-    next_agent = data.get("next_agent", "sales_cs")
-    if next_agent not in ["hr", "sales_cs"]:
+    intent = data.get("intent", "cs")
+
+    # ← الـ routing هنا
+    raw_agent = data.get("next_agent", "sales_cs")
+    if raw_agent == "hr":
+        next_agent = "hr"
+    elif intent in ["greeting", "other"]:
+        next_agent = "direct"
+    else:
         next_agent = "sales_cs"
 
-    intent = data.get("intent", "cs")
-    
     lead_info = data.get("lead_info", {})
     existing_lead = state.get("lead", {})
     for key in ["name", "phone", "day", "time", "topic"]:

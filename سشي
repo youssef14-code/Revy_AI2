@@ -1,0 +1,11 @@
+You: عايز اسال علي وظيفه
+[Supervisor] → hr | intent=hr | lead={'topic': 'job inquiry'}
+[HR Agent] responded with DB data ✅
+RevyAI: أهلاً بك! حالياً لدينا وظيفة متاحة:
+
+**مهندس برمجيات (Software Engineer)**
+*   **المهارات المطلوبة:** Microservices, MVC, Deploy.
+
+هل تود معرفة المزيد من التفاصيل عن هذه الوظيفة أو كيف يمكنك التقديم؟
+
+You:
