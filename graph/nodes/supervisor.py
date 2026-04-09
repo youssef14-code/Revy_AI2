@@ -9,11 +9,7 @@ llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-<<<<<<< HEAD
-    api_key="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",
-=======
     api_key="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",
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
     max_tokens=1500
 )
 
@@ -68,10 +64,6 @@ LEAD INFO RULES
 - Extract only if explicitly mentioned by the user
 - Never assume or fabricate values
 - If not mentioned → null
-<<<<<<< HEAD
-"""
-
-=======
 
 ====================
 Exmpales
@@ -92,7 +84,6 @@ response with this
 }
 
 """
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
 
 
 

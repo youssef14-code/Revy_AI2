@@ -20,11 +20,7 @@ llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-<<<<<<< HEAD
-    api_key="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",
-=======
     api_key="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",
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
     max_tokens=1500
 )
 
@@ -93,8 +89,6 @@ BEHAVIOR
 - Keep responses concise and clear
 
 ====================
-<<<<<<< HEAD
-=======
 MEMORY RULES (MANDATORY)
 ====================
 You MUST include the following tags at the END of your response. 
@@ -108,7 +102,6 @@ DO NOT skip them.
 [Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
 </SUMMARY>
 ====================
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
 LANGUAGE RULE
 ====================
 Always respond in the same language the user is speaking.
