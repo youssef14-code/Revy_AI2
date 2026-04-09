@@ -1,4 +1,4 @@
-# graph/nodes/supervisor.py
+# graph/nodes/intent_node.py
 
 import json, re
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -9,7 +9,11 @@ llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
+<<<<<<< HEAD
     api_key="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",
+=======
+    api_key="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",
+>>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
     max_tokens=1500
 )
 
@@ -64,11 +68,35 @@ LEAD INFO RULES
 - Extract only if explicitly mentioned by the user
 - Never assume or fabricate values
 - If not mentioned → null
+<<<<<<< HEAD
 """
 
+=======
+
+====================
+Exmpales
+====================
+- if any one send hi or hello or hola
+response with this
+
+  "next_agent": "direct",
+  "intent": "greeting | other",
+  "refined_query": "<string or null>",
+  "lead_info": {
+    "name": "<or null>",
+    "phone": "<or null>",
+    "day": "<or null>",
+    "time": "<or null>",
+    "topic": "<or null>"
+  }
+}
+
+"""
+>>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
 
 
-def supervisor_node(state: AgentState) -> AgentState:
+
+def intent_node(state: AgentState) -> AgentState:
     user_message = state["messages"][-1].content
 
     try:

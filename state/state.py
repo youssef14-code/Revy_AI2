@@ -4,7 +4,7 @@ import operator
 
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], operator.add]
-    
+    client: Optional[Any]   
     # Routing
     next_agent: str
     intent: Optional[str]
@@ -18,3 +18,4 @@ class AgentState(TypedDict):
     
     # Memory
     summary: Optional[str]
+    last_bot_reply: Optional[str]

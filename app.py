@@ -1,5 +1,5 @@
 from flask import  Flask, request, jsonify, render_template
-from models.models import Job,Appointment,User,db 
+from models.models import Job,Appointment,Client,db 
 import os
 
 app = Flask(__name__)

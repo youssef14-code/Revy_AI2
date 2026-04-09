@@ -1,17 +1,17 @@
 from datetime import datetime, timedelta, timezone
-from models.models import db, User, Appointment
+from models.models import db, Client, Appointment
 
 
 class BookingService:
     @staticmethod
-    def book(user: User, day: str, time: str, phone_number: str, description: str = ""):
+    def book(client: Client, day: str, time: str, phone_number: str, description: str = ""):
         """
         Create a new appointment for a user.
         """
 
         # Check if appointment already exists
         existing = Appointment.query.filter_by(
-            user_id=user.id,
+            client_id=client.id,
             day=day,
             time=time,
             phone_number=phone_number
@@ -22,8 +22,8 @@ class BookingService:
             return False
 
         new_appointment = Appointment(
-            user_id=user.id,
-            name=user.name,
+            client_id=client.id,
+            name=client.name,
             day=day,
             time=time,
             phone_number=phone_number,
@@ -43,15 +43,11 @@ class BookingService:
 
 class MemoryService:
     @staticmethod
-    def update(user: User, summary: str, last_reply: str):
-        """
-        Update conversation memory for a user.
-        """
-
+    def update(client: Client, summary: str, last_reply: str):
         try:
-            user.summary = summary or ""
-            user.last_bot_reply = last_reply
-            db.session.add(user)
+            client.summary = summary or ""
+            client.last_bot_reply = last_reply
+            db.session.add(client)
             db.session.commit()
         except Exception as e:
             db.session.rollback()

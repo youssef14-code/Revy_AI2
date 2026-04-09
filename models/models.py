@@ -9,8 +9,8 @@ db = SQLAlchemy()
 # -------------------------
 # Users Table
 # -------------------------
-class User(db.Model):
-    __tablename__ = "users"
+class Client(db.Model):
+    __tablename__ = "clients"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -21,7 +21,7 @@ class User(db.Model):
     # One-to-Many relationship
     appointments = db.relationship(
         "Appointment",
-        back_populates="user",
+        back_populates="client",
         cascade="all, delete-orphan",
     )
 
@@ -47,14 +47,14 @@ class Appointment(db.Model):
     )
 
     # Foreign Key → users.id
-    user_id = db.Column(
+    client_id = db.Column(
         db.Integer,
-        db.ForeignKey("users.id"),
+        db.ForeignKey("clients.id"),
         nullable=False
     )
 
     # Relationship
-    user = db.relationship("User", back_populates="appointments" )
+    client = db.relationship("Client", back_populates="appointments" )
 # -------------------------
 # Jobs Table
 # -------------------------
