@@ -3,23 +3,17 @@
 from langchain_core.messages import SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI
 from state.state import AgentState
-<<<<<<< HEAD
-=======
 import re
 from models.models import Client 
 from tools.services import MemoryService
+from graph.nodes.base import safe_invoke
 
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
 
 llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-<<<<<<< HEAD
-    api_key="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",
-=======
-    api_key="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",
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
+    api_key="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",
     max_tokens=1500
 )
 
@@ -59,8 +53,7 @@ BEHAVIOR
 - Do not pretend to know things outside your knowledge
 
 ====================
-<<<<<<< HEAD
-=======
+
 MEMORY RULES (MANDATORY)
 ====================
 You MUST include the following tags at the END of your response. 
@@ -74,7 +67,7 @@ DO NOT skip them.
 [Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
 </SUMMARY>
 ====================
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
+
 LANGUAGE RULE
 ====================
 Always respond in the same language the user is speaking.
@@ -82,37 +75,22 @@ If the user writes in Arabic, respond in Arabic.
 If the user writes in English, respond in English.
 Mixed language? Follow the dominant language used.
 """
-
+@safe_invoke
 def direct_node(state: AgentState) -> AgentState:
-<<<<<<< HEAD
-=======
+    
+  
     # Get current summary from state (defaults to empty string if None)
     current_summary = state.get("summary") or ""
+    last_bot_reply = state.get("last_bot_reply") or ""
     print(f"[Direct Node] Received Summary from State: '{current_summary}'")
+
     
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
-    intent = state.get("intent", "other")
-    
-    # لو السؤال عن الشركة وده وده وده
-    if intent in ["sales", "cs", "booking", "hr"]:
-        # ودّيه للـ RAG
-        return {**state, "next_agent": "rag"}
-    
-<<<<<<< HEAD
-    # غير كده رد مباشرة
-    messages = [
-        SystemMessage(content=SYSTEM_PROMPT),
-        *state["messages"]
-    ]
-    response = llm.invoke(messages)
-    print(f"[Direct Node] responded ✅")
-    return {**state, "messages": [AIMessage(content=response.content)]}
-=======
+
     # Build messages with the previous summary injected into SystemMessage
     messages = [
         SystemMessage(
             content=SYSTEM_PROMPT
-            + f"\n\n====================\nPREVIOUS CONVERSATION SUMMARY (FOR CONTEXT):\n{current_summary}\n===================="
+            + f"\n\n====================\nCONVERSATION CONTEXT\n====================\nPrevious summary:\n{current_summary}\n\nLast bot reply:\n{last_bot_reply}\n===================="
         ),
         *state["messages"],
     ]
@@ -165,4 +143,4 @@ def direct_node(state: AgentState) -> AgentState:
         "summary": new_summary,
         "last_bot_reply": last_reply
     }
->>>>>>> a72955ef28dbbdde0791ac04971e0e8606a3f945
+

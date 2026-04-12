@@ -9,18 +9,16 @@ from langchain_ollama import ChatOllama
 from state.state import AgentState
 from tools.services import MemoryService
 from langchain_core.messages import ToolMessage
-
-# ── import الـ Flask app والـ models ──
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from app import app
 from models.models import Job
 from langchain_openai import ChatOpenAI
+from graph.nodes.base import safe_invoke
 
 llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
+    api_key="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",
     max_tokens=1500
 )
 
@@ -58,7 +56,7 @@ You help candidates explore job opportunities and guide them through the applica
 ====================
 CORE IDENTITY
 ====================
-- Name: Revy
+- Name: Revy Ai
 - Role: Talent Acquisition Assistant
 - Tone: Professional, friendly, and encouraging
 
@@ -110,15 +108,16 @@ If the user writes in English, respond in English.
 Mixed language? Follow the dominant language used.
 """
 
-
+@safe_invoke
 def hr_agent_node(state: AgentState) -> AgentState:
-    context = state.get("rag_context", "")
+    
     current_summary = state.get("summary", "")
+    last_bot_reply = state.get("last_bot_reply", "") or ""
 
     messages = [
         SystemMessage(
-            content=SYSTEM_PROMPT.format(context=context)
-            + f"\n\nPrevious summary:\n{current_summary}"
+             content=SYSTEM_PROMPT
+            + f"\n\n====================\nCONVERSATION CONTEXT\n====================\nPrevious summary:\n{current_summary}\n\nLast bot reply:\n{last_bot_reply}\n===================="
         ),
         *state["messages"]
     ]

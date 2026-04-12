@@ -4,12 +4,13 @@ import json, re
 from langchain_core.messages import SystemMessage, HumanMessage
 from state.state import AgentState
 from langchain_openai import ChatOpenAI
+from graph.nodes.base import safe_invoke
 
 llm = ChatOpenAI(
     model="google/gemini-3-flash-preview",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
+    api_key="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",
     max_tokens=1500
 )
 
@@ -34,8 +35,9 @@ Analyze the user message and return JSON only — no explanation, no markdown.
 ROUTING RULES
 ====================
 - hr: jobs, hiring, careers, vacancies
-- sales_cs: pricing, services, booking, company info, AI solutions
+- sales_cs: pricing, services, company info, AI solutions
 - direct: greetings, small talk, unrelated topics
+- booking:  wants to book a meeting or appointment
 
 ====================
 INTENT RULES
@@ -81,18 +83,37 @@ response with this
     "time": "<or null>",
     "topic": "<or null>"
   }
+
+====================
+CONVERSATION CONTEXT
+====================
+Previous conversation summary:
+{summary}
+
+Last bot reply:
+{last_bot_reply}
+
+  
 }
 
 """
 
 
-
+@safe_invoke
 def intent_node(state: AgentState) -> AgentState:
-    user_message = state["messages"][-1].content
+    if state.get("booking_stage") == "collecting":
+        print(f"[Supervisor] → booking (continuing) | lead={state.get('lead', {})}")
+        return {**state, "next_agent": "booking"}
+    
 
+    user_message = state["messages"][-1].content
+    summary = state.get("summary") or ""
+    last_bot_reply = state.get("last_bot_reply") or ""
+    prompt = SYSTEM_PROMPT.replace("{summary}", summary).replace("{last_bot_reply}", last_bot_reply)
+    
     try:
         response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
+            SystemMessage(content=prompt),
             HumanMessage(content=user_message)
         ])
         raw = response.content.strip()
@@ -107,6 +128,8 @@ def intent_node(state: AgentState) -> AgentState:
     raw_agent = data.get("next_agent", "sales_cs")
     if raw_agent == "hr":
         next_agent = "hr"
+    elif raw_agent == "booking" or intent == "booking":
+        next_agent = "booking"    
     elif intent in ["greeting", "other"]:
         next_agent = "direct"
     else:
@@ -114,6 +137,7 @@ def intent_node(state: AgentState) -> AgentState:
 
     lead_info = data.get("lead_info", {})
     existing_lead = state.get("lead", {})
+    refined_query = data.get("refined_query") or ""
     for key in ["name", "phone", "day", "time", "topic"]:
         if lead_info.get(key):
             existing_lead[key] = lead_info[key]
@@ -124,5 +148,6 @@ def intent_node(state: AgentState) -> AgentState:
         **state,
         "next_agent": next_agent,
         "intent": intent,
-        "lead": existing_lead
+        "lead": existing_lead,
+        "refined_query": refined_query
     }
