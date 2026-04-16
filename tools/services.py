@@ -19,16 +19,17 @@ class BookingService:
                 print("⚠️ Appointment already exists")
                 return False
 
-            new_appointment = Appointment(
+            
+
+            try:
+                new_appointment = Appointment(
                 client_id=client.id,
                 name=client.name,
                 day=day,
                 time=time,
                 phone_number=phone_number,
                 description=description
-            )
-
-            try:
+                 )
                 db.session.add(new_appointment)
                 db.session.commit()
                 print("✅ Appointment saved successfully")

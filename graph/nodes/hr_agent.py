@@ -3,74 +3,69 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import re
-from langchain_core.messages import SystemMessage, AIMessage
-from langchain_core.tools import tool
-from langchain_ollama import ChatOllama
+from langchain_core.messages import SystemMessage, AIMessage , HumanMessage
 from state.state import AgentState
 from tools.services import MemoryService
-from langchain_core.messages import ToolMessage
 from app import app
 from models.models import Job
 from langchain_openai import ChatOpenAI
 from graph.nodes.base import safe_invoke
 
+
 llm = ChatOpenAI(
-    model="google/gemini-3-flash-preview",
+    model="google/gemini-2.0-flash-001",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-    max_tokens=1500
+    api_key="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",
+    max_tokens=1024
 )
 
-
-# ── Tool: جيب الوظايف من الـ DB ──
-@tool
-def get_jobs_from_db(filter: str = "all") -> str:
-    """Get jobs from the database. filter: 'all', 'available', 'closed'"""
+def get_jobs() -> str:
     with app.app_context():
-        if filter == "available":
-            jobs = Job.query.filter_by(is_available=True).all()
-        elif filter == "closed":
-            jobs = Job.query.filter_by(is_available=False).all()
-        else:
-            jobs = Job.query.all()
-
+        jobs = Job.query.filter_by(is_available=True).all()
         if not jobs:
-            return "No jobs found."
-
+            return "No available positions at the moment."
         result = []
         for j in jobs:
-            status = "Available" if j.is_available else "Closed"
-            result.append(f"- {j.job_name} ({status}): {j.description}")
-
+            result.append(f"- {j.job_name}: {j.description}")
         return "\n".join(result)
 
 
-tools = [get_jobs_from_db]
-llm_with_tools = llm.bind_tools(tools)
-
 SYSTEM_PROMPT = """
-You are Revy, a professional HR assistant for talent acquisition.
-You help candidates explore job opportunities and guide them through the application process.
+You are Revy, a Talent Acquisition Assistant at RevyAI.
+
+====================
+ABOUT REVYAI
+====================
+RevyAI is a business-first AI automation company that designs tailored operational systems to reduce cost, eliminate inefficiencies, and improve decision-making. Unlike software vendors, RevyAI builds custom AI solutions shaped around each client's unique workflows — no templates, no SaaS, no generic deployments.
+
+Their solutions are built on specialized AI agents that automate repetitive work, support structured decision-making, and maintain full auditability — while keeping humans in control where it matters most.
+
+Core offerings include:
+- Sales & Lead Qualification Agents
+- Customer Service Automation
+- Claims Processing Automation
+- Operational Intelligence & KPI Tracking
+- Audit & Employee Performance Evaluation
 
 ====================
 CORE IDENTITY
 ====================
-- Name: Revy Ai
+- Name: Revy
 - Role: Talent Acquisition Assistant
 - Tone: Professional, friendly, and encouraging
 
 ====================
 WHAT YOU DO
 ====================
-- Present available job listings fetched from the database
-- Answer questions about a specific position
+- Present available job listings from the database
+- Answer questions about specific positions
 - Guide interested candidates to apply
 
 ====================
 APPLICATION PROCESS
 ====================
-When a candidate is interested in a position, guide them with:
+When a candidate is interested in a position:
 "Please send your CV to info@revyai.tech and our team will be in touch with you soon."
 
 ====================
@@ -82,9 +77,14 @@ OUT OF SCOPE
 ====================
 BEHAVIOR
 ====================
-- If no jobs are available, inform the candidate politely and encourage them to check back later
-- Never fabricate job listings — only present what is fetched from the database
+- Only present jobs listed below — never fabricate listings
+- If no jobs are available, inform the candidate politely
 - Keep responses concise and clear
+
+====================
+AVAILABLE JOBS
+====================
+{jobs}
 
 ====================
 MEMORY RULES (MANDATORY)
@@ -99,46 +99,37 @@ DO NOT skip them.
 <SUMMARY>
 [Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
 </SUMMARY>
+
 ====================
-LANGUAGE RULE
+LANGUAGE PROTOCOL
 ====================
-Always respond in the same language the user is speaking.
-If the user writes in Arabic, respond in Arabic.
-If the user writes in English, respond in English.
-Mixed language? Follow the dominant language used.
+Arabic input → Arabic response.
+English input → English response.
+Never mix languages within a single response.
 """
 
 @safe_invoke
 def hr_agent_node(state: AgentState) -> AgentState:
-    
-    current_summary = state.get("summary", "")
+    user_message = state["messages"][-1].content
+    current_summary = state.get("summary", "") or ""
     last_bot_reply = state.get("last_bot_reply", "") or ""
+
+    # جيب الوظايف مباشرة
+    jobs = get_jobs()
+    print(f"[HR Agent] Jobs fetched: {jobs[:100]}...")
 
     messages = [
         SystemMessage(
-             content=SYSTEM_PROMPT
-            + f"\n\n====================\nCONVERSATION CONTEXT\n====================\nPrevious summary:\n{current_summary}\n\nLast bot reply:\n{last_bot_reply}\n===================="
+            content=SYSTEM_PROMPT.replace("{jobs}", jobs)
+            + f"\n\n====================\nCONVERSATION CONTEXT\n====================\n"
+            + f"Previous summary:\n{current_summary}\n\n"
+            + f"Last bot reply:\n{last_bot_reply}\n"
+            + "===================="
         ),
-        *state["messages"]
+        HumanMessage(content=user_message)
     ]
-    
-    response = llm_with_tools.invoke(messages)
 
-    # Handle Tool Calls
-    if response.tool_calls:
-        for tool_call in response.tool_calls:
-            if tool_call["name"] == "get_jobs_from_db":
-                filter_val = tool_call["args"].get("filter", "all")
-                tool_result = get_jobs_from_db.invoke({"filter": filter_val})
-
-                messages.append(response)
-                messages.append(ToolMessage(
-                    content=str(tool_result),
-                    tool_call_id=tool_call["id"]
-                ))
-                # Re-invoke to get the final response with the tags
-                response = llm_with_tools.invoke(messages)
-    
+    response = llm.invoke(messages)
     content = response.content
 
     # =========================
@@ -153,31 +144,33 @@ def hr_agent_node(state: AgentState) -> AgentState:
     reply_match = re.search(r"<LAST_BOT_REPLY>(.*?)</LAST_BOT_REPLY>", content, re.DOTALL)
     last_reply = reply_match.group(1).strip() if reply_match else ""
 
+
     # =========================
     # Update Database (MemoryService)
     # =========================
     client_obj = state.get("client")
     if client_obj:
-        print(f"[HR Agent] Updating DB for client: {client_obj}")
+        print(f"[Direct Node] Saving to DB for client: {client_obj}")
         MemoryService.update(
             client=client_obj,
             summary=new_summary,
             last_reply=last_reply
         )
-    else:
-        print("[HR Agent] WARNING: 'client' is None in state. Data NOT saved to Database.")
+
+    print("[HR Agent] responded ✅")
+
 
     # =========================
-    # Clean message for user
+    # Clean response for user
     # =========================
     clean_reply = re.sub(r"<SUMMARY>.*?</SUMMARY>", "", content, flags=re.DOTALL)
     clean_reply = re.sub(r"<LAST_BOT_REPLY>.*?</LAST_BOT_REPLY>", "", clean_reply, flags=re.DOTALL).strip()
     
+    # Fallback if cleaning removed everything
     if not clean_reply and last_reply:
         clean_reply = last_reply
 
-    print("[HR Agent] responded ✅")
-    
+    # Return updated state
     return {
         **state,
         "messages": [AIMessage(content=clean_reply)],

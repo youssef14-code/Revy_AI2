@@ -1,6 +1,6 @@
 # graph/nodes/direct_node.py
 
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage , HumanMessage
 from langchain_openai import ChatOpenAI
 from state.state import AgentState
 import re
@@ -9,12 +9,13 @@ from tools.services import MemoryService
 from graph.nodes.base import safe_invoke
 
 
+
 llm = ChatOpenAI(
-    model="google/gemini-3-flash-preview",
+    model="google/gemini-2.0-flash-001",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-    max_tokens=1500
+    api_key="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",
+    max_tokens=1024
 )
 
 SYSTEM_PROMPT = """
@@ -53,7 +54,6 @@ BEHAVIOR
 - Do not pretend to know things outside your knowledge
 
 ====================
-
 MEMORY RULES (MANDATORY)
 ====================
 You MUST include the following tags at the END of your response. 
@@ -66,20 +66,22 @@ DO NOT skip them.
 <SUMMARY>
 [Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
 </SUMMARY>
-====================
 
-LANGUAGE RULE
 ====================
-Always respond in the same language the user is speaking.
-If the user writes in Arabic, respond in Arabic.
-If the user writes in English, respond in English.
-Mixed language? Follow the dominant language used.
+LANGUAGE PROTOCOL
+====================
+Detect and match the client's language automatically.
+Arabic input → Arabic response.
+English input → English response.
+Mixed input → Default to the dominant language used.
+Never mix languages within a single response.
 """
 @safe_invoke
 def direct_node(state: AgentState) -> AgentState:
     
   
     # Get current summary from state (defaults to empty string if None)
+    user_message = state["messages"][-1].content
     current_summary = state.get("summary") or ""
     last_bot_reply = state.get("last_bot_reply") or ""
     print(f"[Direct Node] Received Summary from State: '{current_summary}'")
@@ -92,7 +94,7 @@ def direct_node(state: AgentState) -> AgentState:
             content=SYSTEM_PROMPT
             + f"\n\n====================\nCONVERSATION CONTEXT\n====================\nPrevious summary:\n{current_summary}\n\nLast bot reply:\n{last_bot_reply}\n===================="
         ),
-        *state["messages"],
+        HumanMessage(content=user_message),
     ]
 
     response = llm.invoke(messages)
@@ -136,11 +138,9 @@ def direct_node(state: AgentState) -> AgentState:
 
     print(f"[Direct Node] responded ✅ | New Summary Length: {len(new_summary)}")
     
-    # Return updated state
     return {
         **state,
         "messages": [AIMessage(content=clean_reply)],
         "summary": new_summary,
         "last_bot_reply": last_reply
     }
-
