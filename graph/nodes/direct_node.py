@@ -1,19 +1,23 @@
 # graph/nodes/direct_node.py
 
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage , HumanMessage
 from langchain_openai import ChatOpenAI
 from state.state import AgentState
 import re
 from models.models import Client 
 from tools.services import MemoryService
+from graph.nodes.base import safe_invoke
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 llm = ChatOpenAI(
-    model="google/gemini-3-flash-preview",
+    model="google/gemini-2.5-flash-lite-preview-09-2025",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-    max_tokens=1500
+    api_key="OPENROUTER_API_KEY",
+    max_tokens=1700
 )
 
 SYSTEM_PROMPT = """
@@ -58,40 +62,60 @@ You MUST include the following tags at the END of your response.
 DO NOT skip them.
 
 <LAST_BOT_REPLY>
-[Repeat your full conversational reply to the user here]
+[Your reply to the user. This will be used as context in the next conversation turn.]
 </LAST_BOT_REPLY>
 
-<SUMMARY>
-[Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
+<<SUMMARY>
+[Cumulative conversation summary. STRICT RULES:
+1. Build on the previous summary — copy it first, then update only what changed
+2. Always capture in this structure:
+   - User Info: any personal details mentioned (name, phone, company, role, etc.)
+   - Intent: what the user is trying to accomplish
+   - Key Points: important topics, questions, or concerns raised
+   - Status: what just happened + what is still pending
+3. Extract User Info from ANY message — not just booking context
+4. Use English regardless of conversation language.]
 </SUMMARY>
-====================
-LANGUAGE RULE
-====================
-Always respond in the same language the user is speaking.
-If the user writes in Arabic, respond in Arabic.
-If the user writes in English, respond in English.
-Mixed language? Follow the dominant language used.
-"""
 
+<LEAD_INFO>
+[Structured lead data. STRICT RULES:
+1. Continuously collect and update fields as the user provides information
+2. Never remove or overwrite existing data unless the user explicitly corrects it
+3. After booking is CONFIRMED:
+   - Move essential info (name, phone, email, booking reference) to SUMMARY under "Retained Info"
+   - Then CLEAR all fields in this section and replace with: "✅ Booking confirmed — lead data cleared."]
+</LEAD_INFO>
+
+===============
+
+====================
+LANGUAGE PROTOCOL
+====================
+Detect and match the client's language automatically.
+Arabic input → Arabic response.
+English input → English response.
+Mixed input → Default to the dominant language used.
+Never mix languages within a single response.
+"""
+@safe_invoke
 def direct_node(state: AgentState) -> AgentState:
+    
+  
     # Get current summary from state (defaults to empty string if None)
+    user_message = state["messages"][-1].content
     current_summary = state.get("summary") or ""
+    last_bot_reply = state.get("last_bot_reply") or ""
     print(f"[Direct Node] Received Summary from State: '{current_summary}'")
+
     
-    intent = state.get("intent", "other")
-    
-    # لو السؤال عن الشركة وده وده وده
-    if intent in ["sales", "cs", "booking", "hr"]:
-        # ودّيه للـ RAG
-        return {**state, "next_agent": "rag"}
-    
+
     # Build messages with the previous summary injected into SystemMessage
     messages = [
         SystemMessage(
             content=SYSTEM_PROMPT
-            + f"\n\n====================\nPREVIOUS CONVERSATION SUMMARY (FOR CONTEXT):\n{current_summary}\n===================="
+            + f"\n\n====================\nCONVERSATION CONTEXT\n====================\nPrevious summary:\n{current_summary}\n\nLast bot reply:\n{last_bot_reply}\n===================="
         ),
-        *state["messages"],
+        HumanMessage(content=user_message),
     ]
 
     response = llm.invoke(messages)
@@ -109,6 +133,8 @@ def direct_node(state: AgentState) -> AgentState:
     reply_match = re.search(r"<LAST_BOT_REPLY>(.*?)</LAST_BOT_REPLY>", content, re.DOTALL)
     last_reply = reply_match.group(1).strip() if reply_match else ""
 
+    
+
     # =========================
     # Update Database (MemoryService)
     # =========================
@@ -123,22 +149,15 @@ def direct_node(state: AgentState) -> AgentState:
     else:
         print("[Direct Node] WARNING: 'client' is None in state. Data NOT saved to Database.")
 
-    # =========================
-    # Clean response for user
-    # =========================
-    clean_reply = re.sub(r"<SUMMARY>.*?</SUMMARY>", "", content, flags=re.DOTALL)
-    clean_reply = re.sub(r"<LAST_BOT_REPLY>.*?</LAST_BOT_REPLY>", "", clean_reply, flags=re.DOTALL).strip()
     
-    # Fallback if cleaning removed everything
-    if not clean_reply and last_reply:
-        clean_reply = last_reply
+    
 
     print(f"[Direct Node] responded ✅ | New Summary Length: {len(new_summary)}")
+    print(f"🔢 Tokens: input={response.usage_metadata['input_tokens']} | output={response.usage_metadata['output_tokens']} | total={response.usage_metadata['total_tokens']}")
     
-    # Return updated state
     return {
         **state,
-        "messages": [AIMessage(content=clean_reply)],
+        "messages": [AIMessage(content=last_reply)],
         "summary": new_summary,
         "last_bot_reply": last_reply
     }

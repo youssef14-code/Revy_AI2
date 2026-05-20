@@ -23,7 +23,7 @@ with app.app_context():
     if not client:
         client = Client(name="Terminal User")
         db.session.add(client)
-        db.session.commit()
+        db.session.commit()  
 
     current_state = {
         "messages": [],
@@ -39,9 +39,13 @@ with app.app_context():
         user_message = input("You: ")
         if user_message.lower() == "exit":
             break
-
+        current_state["client"] = client
         current_state["messages"].append(HumanMessage(content=user_message))
         current_state = graph.invoke(current_state)
-
         print(f"RevyAI: {current_state['messages'][-1].content}\n")
         print(f"[DEBUG] Summary: {current_state.get('summary')}")
+            # ← ضيف دي
+        if current_state.get("booking_stage") == "confirmed":
+            current_state["booking_stage"] = None
+            current_state["lead"] = {} 
+            print("[DEBUG] Booking stage reset ✅")

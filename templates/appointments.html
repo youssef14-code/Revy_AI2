@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Revy HR — Appointments</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --border: #2e2e2e;
+    --accent: #c8f04c;
+    --accent-dim: rgba(200,240,76,0.12);
+    --text: #f0ede6;
+    --text-muted: #6b6b6b;
+    --text-mid: #a0a0a0;
+    --danger: #ff5f5f;
+    --danger-dim: rgba(255,95,95,0.1);
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 32px 48px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .logo span { color: var(--accent); }
+
+  .header-nav { display: flex; gap: 8px; }
+
+  .nav-link {
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .nav-link:hover { color: var(--text); border-color: var(--border); }
+
+  .nav-link.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-color: rgba(200,240,76,0.25);
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 48px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+  }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+  }
+
+  .page-title small {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .search-wrap { position: relative; }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .search-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px 9px 36px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    width: 220px;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 32px;
+    color: var(--text);
+  }
+
+  .stat-value.accent { color: var(--accent); }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .filter-btn {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead tr { border-bottom: 1px solid var(--border); }
+
+  th {
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  th:hover { color: var(--text); }
+  th.sorted { color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .client-name { font-weight: 500; font-size: 15px; }
+  .client-phone { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .appt-desc {
+    color: var(--text-mid);
+    font-size: 13px;
+    max-width: 280px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .appt-desc.no-desc { color: var(--text-muted); font-style: italic; }
+
+  .day-badge {
+    display: inline-block;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(200,240,76,0.25);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .created-at { font-size: 12px; color: var(--text-muted); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .modal-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .detail-item label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+
+  .detail-item .val { font-size: 14px; color: var(--text); }
+
+  .detail-full { margin-bottom: 16px; }
+
+  .detail-full label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+  }
+
+  .detail-full .val {
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-height: 60px;
+    line-height: 1.6;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  .btn {
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s;
+    z-index: 200;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .page-controls { display: flex; gap: 6px; }
+
+  .page-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .page-btn:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
+  .page-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Revy <span>HR</span></div>
+  <nav class="header-nav">
+    <a href="/" class="nav-link">Jobs</a>
+    <a href="/appointments" class="nav-link active">Appointments</a>
+  </nav>
+</header>
+
+<main>
+  <div class="topbar">
+    <div class="page-title">
+      Appointments
+      <small>All booked sessions from clients</small>
+    </div>
+    <div class="search-wrap">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input class="search-input" type="text" id="search" placeholder="Search name or phone…" oninput="onSearch()"/>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total Appointments</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Today</div>
+      <div class="stat-value accent" id="stat-today">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unique Clients</div>
+      <div class="stat-value" id="stat-clients">—</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('today', this)">Today</button>
+    <button class="filter-btn" onclick="setFilter('week', this)">This Week</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('id')" id="th-id"># ↕</th>
+          <th>Client</th>
+          <th onclick="sortBy('day')" id="th-day">Day ↕</th>
+          <th>Time</th>
+          <th>Description</th>
+          <th onclick="sortBy('created_at')" id="th-created_at">Created ↕</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="appts-tbody">
+        <tr><td colspan="7" class="empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <span id="page-info"></span>
+    <div class="page-controls" id="page-controls"></div>
+  </div>
+</main>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-name">—</div>
+    <div class="modal-subtitle" id="modal-phone">—</div>
+    <div class="detail-grid">
+      <div class="detail-item">
+        <label>Day</label>
+        <div class="val" id="modal-day">—</div>
+      </div>
+      <div class="detail-item">
+        <label>Time</label>
+        <div class="val" id="modal-time">—</div>
+      </div>
+      <div class="detail-item">
+        <label>Client ID</label>
+        <div class="val" id="modal-client-id">—</div>
+      </div>
+      <div class="detail-item">
+        <label>Created At</label>
+        <div class="val" id="modal-created">—</div>
+      </div>
+    </div>
+    <div class="detail-full">
+      <label>Description</label>
+      <div class="val" id="modal-desc">—</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let allAppts = [];
+  let filtered  = [];
+  let currentFilter = 'all';
+  let searchQuery   = '';
+  let sortKey       = 'id';
+  let sortDir       = 'asc';
+  let currentPage   = 1;
+  const PAGE_SIZE   = 10;
+
+  async function loadAppointments() {
+    try {
+      const res = await fetch('/api/appointments');
+      allAppts  = await res.json();
+      updateStats();
+      applyFilters();
+    } catch {
+      document.getElementById('appts-tbody').innerHTML =
+        '<tr><td colspan="7" class="empty">Could not load appointments. Is the server running?</td></tr>';
+    }
+  }
+
+  function updateStats() {
+    const todayCount = allAppts.filter(a => isToday(a.day)).length;
+    const uniqueClients = new Set(allAppts.map(a => a.client_id)).size;
+
+    document.getElementById('stat-total').textContent   = allAppts.length;
+    document.getElementById('stat-today').textContent   = todayCount;
+    document.getElementById('stat-clients').textContent = uniqueClients;
+  }
+
+  // الأيام العربية الشائعة اللي البوت بيكتبها
+  const TODAY_KEYWORDS  = ['اليوم', 'النهارده', 'هذا اليوم'];
+  const TOMORROW_KEYWORDS = ['غدا', 'غداً', 'بكرة', 'بكره'];
+  const ARABIC_DAYS = ['الأحد','الإثنين','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+
+  function isToday(day) {
+    if (!day) return false;
+    const d = day.trim();
+    if (TODAY_KEYWORDS.some(k => d.includes(k))) return true;
+    // لو بالإنجليزي
+    const engToday = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    return d === engToday;
+  }
+
+  function isThisWeek(day) {
+    if (!day) return false;
+    const d = day.trim();
+    // لو فيه "القادم" أو "الأسبوع القادم" يبقى مش الأسبوع ده
+    if (d.includes('القادم') || d.includes('القادمة')) return false;
+    if (isToday(d) || TOMORROW_KEYWORDS.some(k => d.includes(k))) return true;
+    return ARABIC_DAYS.some(k => d.includes(k));
+  }
+
+  function setFilter(f, el) {
+    currentFilter = f;
+    currentPage   = 1;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    applyFilters();
+  }
+
+  function onSearch() {
+    searchQuery = document.getElementById('search').value.toLowerCase().trim();
+    currentPage = 1;
+    applyFilters();
+  }
+
+  function applyFilters() {
+    let data = [...allAppts];
+
+    if (currentFilter === 'today') {
+      data = data.filter(a => isToday(a.day));
+    } else if (currentFilter === 'week') {
+      data = data.filter(a => isThisWeek(a.day));
+    }
+
+    if (searchQuery) {
+      data = data.filter(a =>
+        a.name.toLowerCase().includes(searchQuery) ||
+        a.phone_number.toLowerCase().includes(searchQuery)
+      );
+    }
+
+    data.sort((a, b) => {
+      let va = a[sortKey] ?? '', vb = b[sortKey] ?? '';
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ?  1 : -1;
+      return 0;
+    });
+
+    filtered = data;
+    renderTable();
+    renderPagination();
+  }
+
+  function sortBy(key) {
+    if (sortKey === key) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortKey = key;
+      sortDir = 'asc';
+    }
+    document.querySelectorAll('th').forEach(t => t.classList.remove('sorted'));
+    const th = document.getElementById('th-' + key);
+    if (th) {
+      th.classList.add('sorted');
+      const arrow = sortDir === 'asc' ? '↑' : '↓';
+      th.textContent = th.textContent.replace(/[↕↑↓]/, arrow);
+    }
+    applyFilters();
+  }
+
+  function renderTable() {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = filtered.slice(start, start + PAGE_SIZE);
+    const tbody = document.getElementById('appts-tbody');
+
+    if (!page.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No appointments found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = page.map(a => `
+      <tr>
+        <td style="color:var(--text-muted);font-size:12px">${a.id}</td>
+        <td>
+          <div class="client-name">${esc(a.name)}</div>
+          <div class="client-phone">${esc(a.phone_number)}</div>
+        </td>
+        <td><span class="day-badge">${esc(a.day)}</span></td>
+        <td style="font-size:13px;color:var(--text-mid)">${esc(a.time)}</td>
+        <td>
+          <div class="appt-desc ${!a.description ? 'no-desc' : ''}">
+            ${a.description ? esc(a.description) : 'No description'}
+          </div>
+        </td>
+        <td class="created-at">${formatDate(a.created_at)}</td>
+        <td>
+          <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px"
+                  onclick="openDetail(${a.id})">View</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderPagination() {
+    const total = filtered.length;
+    const pages = Math.ceil(total / PAGE_SIZE);
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end   = Math.min(currentPage * PAGE_SIZE, total);
+
+    document.getElementById('page-info').textContent =
+      total ? `Showing ${start}–${end} of ${total}` : '';
+
+    const ctrl = document.getElementById('page-controls');
+    if (pages <= 1) { ctrl.innerHTML = ''; return; }
+
+    let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+    for (let i = 1; i <= pages; i++) {
+      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    }
+    html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===pages?'disabled':''}>›</button>`;
+    ctrl.innerHTML = html;
+  }
+
+  function goPage(p) {
+    const pages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (p < 1 || p > pages) return;
+    currentPage = p;
+    renderTable();
+    renderPagination();
+  }
+
+  function openDetail(id) {
+    const a = allAppts.find(x => x.id === id);
+    if (!a) return;
+    document.getElementById('modal-name').textContent      = a.name;
+    document.getElementById('modal-phone').textContent     = a.phone_number;
+    document.getElementById('modal-day').textContent       = a.day;
+    document.getElementById('modal-time').textContent      = a.time;
+    document.getElementById('modal-client-id').textContent = a.client_id;
+    document.getElementById('modal-created').textContent   = formatDate(a.created_at);
+    document.getElementById('modal-desc').textContent      = a.description || 'No description provided.';
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(dt) {
+    if (!dt) return '—';
+    try {
+      return new Date(dt).toLocaleDateString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch { return String(dt); }
+  }
+
+  loadAppointments();
+</script>
+</body>
+</html>

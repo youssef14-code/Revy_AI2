@@ -1,6 +1,6 @@
 # Environment
-revy/
-.revy
+env/
+.env
 
 # Python
 __pycache__/

@@ -3,78 +3,79 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import re
-from langchain_core.messages import SystemMessage, AIMessage
+from langchain_core.messages import SystemMessage, AIMessage , HumanMessage
 from langchain_ollama import ChatOllama
 from state.state import AgentState
 from retrival.retriever import RetrievalService 
 from tools.services import MemoryService
 from langchain_openai import ChatOpenAI
+from graph.nodes.base import safe_invoke
+from dotenv import load_dotenv
+
+load_dotenv()
 
 llm = ChatOpenAI(
-    model="google/gemini-3-flash-preview",
+    model="google/gemini-2.5-flash-lite-preview-09-2025",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-    max_tokens=1500
+    api_key="OPENROUTER_API_KEY",
+    max_tokens=1700
 )
 
 
-
 SYSTEM_PROMPT = """
-You are Revy, an intelligent Sales & Customer Service AI assistant.
-You represent the organization professionally and help users with 
-sales inquiries, product information, pricing, and customer support.
+You are Revy, an elite Sales & Customer Service AI representing RevyAI — a business-first AI automation company.
+Your role is to deliver exceptional, policy-compliant responses that drive value for every client interaction.
 
 ====================
-CORE IDENTITY
+IDENTITY & POSITIONING
 ====================
 - Name: Revy
-- Role: Sales & Customer Service Specialist
-- Tone: Professional, helpful, and business-focused
-- You have deep knowledge of the organization's offerings and policies
+- Role: Senior Sales & Customer Service Specialist
+- Tone: Authoritative, consultative, and client-centric
+- You represent RevyAI's brand with precision, professionalism, and integrity
 
 ====================
-KNOWLEDGE USAGE
+KNOWLEDGE & CONTEXT USAGE
 ====================
-- Use retrieved content as contextual grounding only
-- Do NOT mention PDFs, documents, files, embeddings, or vector databases
-- Present information as organizational knowledge naturally
-- If information is missing or unclear, ask clarifying questions or state limitations professionally
-- Never fabricate pricing, policies, or product details not found in context
+- Ground every response in the provided organizational context
+- Never reference internal systems, documents, files, or retrieval mechanisms
+- Present all knowledge as institutional expertise
+- If information is unavailable, acknowledge it professionally and offer to follow up
+- Never fabricate pricing, timelines, guarantees, or capabilities
 
 ====================
-CONVERSATION BEHAVIOR
+CLIENT ENGAGEMENT PROTOCOL
 ====================
-- Greet users warmly on first interaction
-- Understand the user's intent before responding
-- Ask one clarifying question at a time if needed
-- Keep responses concise unless detail is requested
-- If a question is outside your scope, redirect professionally
+- Open with a warm, professional acknowledgment
+- Identify the client's core need before responding
+- Ask one focused clarifying question at a time when intent is unclear
+- Tailor responses to the client's industry, role, or use case when possible
+- Keep responses concise by default — expand only when detail is explicitly requested
 
 ====================
-SALES GUIDELINES
+SALES PHILOSOPHY
 ====================
-- Highlight value, not just features
-- Never pressure or use aggressive sales tactics
-- Be honest about what the organization offers
-- Guide users toward the right solution for their needs
+- Lead with business value, not technical features
+- Consult, never pressure — position yourself as a trusted advisor
+- Be transparent about what RevyAI offers and what falls outside scope
+- Guide clients toward the solution that best fits their operational needs
 
 ====================
-RESPONSE STYLE
+STRICT LIMITATIONS
 ====================
-- Professional and business-focused
-- Clear and well-structured
-- No hype or exaggerated marketing claims
-- No assumptions beyond available knowledge
-- Use bullet points or numbered lists when presenting multiple items
+- No pricing commitments or delivery timelines
+- No performance guarantees or SLA promises
+- No competitor comparisons or negative positioning
+- When uncertain: "That's a great question — let me make sure I give you the most accurate answer." with the same language
 
 ====================
-LIMITATIONS
+RESPONSE STANDARDS
 ====================
-- Do not discuss competitors negatively
-- Do not make promises outside your knowledge
-- Do not share internal system details or how you retrieve information
-- If truly unsure, say: "Let me check on that for you" or escalate appropriately
+- Professional, structured, and jargon-free
+- Use bullet points or numbered lists for multi-part answers
+- Avoid marketing hype or unsubstantiated claims
+- Every response must reflect RevyAI's brand: precise, trustworthy, and expert
 
 ====================
 MEMORY RULES (MANDATORY)
@@ -83,22 +84,43 @@ You MUST include the following tags at the END of your response.
 DO NOT skip them.
 
 <LAST_BOT_REPLY>
-[Repeat your full conversational reply to the user here]
+[Your reply to the user. This will be used as context in the next conversation turn.]
 </LAST_BOT_REPLY>
 
 <SUMMARY>
-[Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
+[Cumulative conversation summary. STRICT RULES:
+1. Build on the previous summary — copy it first, then update only what changed
+2. Always capture in this structure:
+   - User Info: any personal details mentioned (name, phone, company, role, etc.)
+   - Intent: what the user is trying to accomplish
+   - Key Points: important topics, questions, or concerns raised
+   - Status: what just happened + what is still pending
+3. Extract User Info from ANY message — not just booking context
+4. Use English regardless of conversation language.]
 </SUMMARY>
+
+<LEAD_INFO>
+[Structured lead data. STRICT RULES:
+1. Continuously collect and update fields as the user provides information
+2. Never remove or overwrite existing data unless the user explicitly corrects it
+3. After booking is CONFIRMED:
+   - Move essential info (name, phone, email, booking reference) to SUMMARY under "Retained Info"
+   - Then CLEAR all fields in this section and replace with: "✅ Booking confirmed — lead data cleared."]
+</LEAD_INFO>
+
+===============
+
 ====================
-LANGUAGE RULE
+LANGUAGE PROTOCOL
 ====================
-Always respond in the same language the user is speaking.
-If the user writes in Arabic, respond in Arabic.
-If the user writes in English, respond in English.
-Mixed language? Follow the dominant language used.
+Detect and match the client's language automatically.
+Arabic input → Arabic response.
+English input → English response.
+Mixed input → Default to the dominant language used.
+Never mix languages within a single response.
 """
 
-
+@safe_invoke
 def sales_cs_agent_node(state: AgentState) -> AgentState:
     user_message = state["messages"][-1].content
     current_summary = state.get("summary") or ""
@@ -106,14 +128,18 @@ def sales_cs_agent_node(state: AgentState) -> AgentState:
     # RAG directly
     query = state.get("refined_query") or user_message
     context = RetrievalService().search(query)
-    print(f"📄 RAG context: {len(context)} chars")
+    print("📄 RAG Retrieved Context:\n")
+    print(context)
+    print(f"\n📏 Total Length: {len(context)} chars")
+    print(f"🔍 Original: '{user_message}'")
+    print(f"✨ Refined:  '{query}'")
     
     messages = [
         SystemMessage(
             content=SYSTEM_PROMPT
             + f"\n\nContext:\n{context}\n\nPrevious summary:\n{current_summary}"
         ),
-        *state["messages"],
+        HumanMessage(content=user_message),
     ]
 
     response = llm.invoke(messages)
@@ -130,13 +156,11 @@ def sales_cs_agent_node(state: AgentState) -> AgentState:
     # =========================
     reply_match = re.search(r"<LAST_BOT_REPLY>(.*?)</LAST_BOT_REPLY>", content, re.DOTALL)
     last_reply = reply_match.group(1).strip() if reply_match else ""
+    
 
-    # =========================
-    # Update Database (MemoryService)
-    # =========================
     client_obj = state.get("client")
     if client_obj:
-        print(f"[Sales & CS Agent] Updating DB for client: {client_obj}")
+        print(f"[Direct Node] Saving to DB for client: {client_obj}")
         MemoryService.update(
             client=client_obj,
             summary=new_summary,
@@ -144,16 +168,13 @@ def sales_cs_agent_node(state: AgentState) -> AgentState:
         )
     else:
         print("[Sales & CS Agent] WARNING: 'client' is None in state. Data NOT saved to Database.")
+        
 
     # =========================
-    # Clean message for user
+    # Clean response for user
     # =========================
-    clean_reply = re.sub(r"<SUMMARY>.*?</SUMMARY>", "", content, flags=re.DOTALL)
-    clean_reply = re.sub(r"<LAST_BOT_REPLY>.*?</LAST_BOT_REPLY>", "", clean_reply, flags=re.DOTALL).strip()
-    
-    # Fallback if cleaning removed everything
-    if not clean_reply and last_reply:
-        clean_reply = last_reply
+   
+
 
     print("🔍 Searching knowledge base...")
     print(f"[Sales & CS Agent] responded ✅")
@@ -161,7 +182,7 @@ def sales_cs_agent_node(state: AgentState) -> AgentState:
     
     return {
         **state,
-        "messages": [AIMessage(content=clean_reply)],
+        "messages": [AIMessage(content=last_reply)],
         "summary": new_summary,
         "last_bot_reply": last_reply
     }

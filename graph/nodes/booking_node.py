@@ -1,19 +1,18 @@
-# graph/nodes/hr_agent.py
+# graph/nodes/booking_node.py
 
-import sys, os
+import sys, os 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import re
-from langchain_core.messages import SystemMessage, AIMessage , HumanMessage
-from state.state import AgentState
-from tools.services import MemoryService
-from app import app
-from models.models import Job
+from langchain_core.messages import SystemMessage, AIMessage, ToolMessage , HumanMessage
+from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
+from state.state import AgentState
+from tools.tools import create_booking_tool
+from tools.services import MemoryService
 from graph.nodes.base import safe_invoke
 from dotenv import load_dotenv
 
 load_dotenv()
-
 
 llm = ChatOpenAI(
     model="google/gemini-2.5-flash-lite-preview-09-2025",
@@ -23,71 +22,43 @@ llm = ChatOpenAI(
     max_tokens=1700
 )
 
-def get_jobs() -> str:
-    with app.app_context():
-        jobs = Job.query.filter_by(is_available=True).all()
-        if not jobs:
-            return "No available positions at the moment."
-        result = []
-        for j in jobs:
-            result.append(f"- {j.job_name}: {j.description}")
-        return "\n".join(result)
-
-
-SYSTEM_PROMPT = """
-You are Revy, a Talent Acquisition Assistant at RevyAI.
+SYSTEM_PROMPT = """You are Revy, a professional booking assistant for RevyAI.
+Your job is to collect the required information and book a business meeting or consultation.
 
 ====================
-ABOUT REVYAI
+COMPANY INFO
 ====================
-RevyAI is a business-first AI automation company that designs tailored operational systems to reduce cost, eliminate inefficiencies, and improve decision-making. Unlike software vendors, RevyAI builds custom AI solutions shaped around each client's unique workflows — no templates, no SaaS, no generic deployments.
-
-Their solutions are built on specialized AI agents that automate repetitive work, support structured decision-making, and maintain full auditability — while keeping humans in control where it matters most.
-
-Core offerings include:
-- Sales & Lead Qualification Agents
-- Customer Service Automation
-- Claims Processing Automation
-- Operational Intelligence & KPI Tracking
-- Audit & Employee Performance Evaluation
+- Company: RevyAI
+- Services: AI automation, intelligent agents, system integration
+- Contact: info@revyai.tech
 
 ====================
-CORE IDENTITY
+REQUIRED FIELDS
 ====================
-- Name: Revy
-- Role: Talent Acquisition Assistant
-- Tone: Professional, friendly, and encouraging
+- name: client full name
+- day: preferred day (e.g. Monday, March 15)
+- time:  preferred time MUST be in 12-hour format with AM/PM (e.g. 10:00 AM or 07:30 PM)
+  IMPORTANT:
+  - Always include AM or PM
+  - If user does not specify AM/PM, ask a clarification question
+  - Never return ambiguous time like "10:00" only
+- phone_number: client phone number
+- description: meeting purpose in details
 
 ====================
-WHAT YOU DO
+STEPS
 ====================
-- Present available job listings from the database
-- Answer questions about specific positions
-- Guide interested candidates to apply
-
-====================
-APPLICATION PROCESS
-====================
-When a candidate is interested in a position:
-"Please send your CV to info@revyai.tech and our team will be in touch with you soon."
-
-====================
-OUT OF SCOPE
-====================
-- HR policies, payroll, or attendance → politely inform them this is outside your scope
-- Sales or product inquiries → politely redirect them
+1. Check what fields are already collected from the conversation context
+2. Ask ONLY for the missing fields — never re-ask for info already provided
+3. Once ALL required fields are collected AND client confirms → call book_appointment tool
+4. Confirm the booking with a professional summary
 
 ====================
 BEHAVIOR
 ====================
-- Only present jobs listed below — never fabricate listings
-- If no jobs are available, inform the candidate politely
-- Keep responses concise and clear
-
-====================
-AVAILABLE JOBS
-====================
-{jobs}
+- Be concise and professional
+- Never fabricate or assume information
+- Never confirm a booking without calling the tool first
 
 ====================
 MEMORY RULES (MANDATORY)
@@ -125,34 +96,60 @@ DO NOT skip them.
 ====================
 LANGUAGE PROTOCOL
 ====================
+Detect and match the client's language automatically.
 Arabic input → Arabic response.
 English input → English response.
+Mixed input → Default to the dominant language used.
 Never mix languages within a single response.
 """
 
 @safe_invoke
-def hr_agent_node(state: AgentState) -> AgentState:
+def booking_node(state: AgentState) -> AgentState:
+    # ── جيب الـ client من الـ state ──
     user_message = state["messages"][-1].content
-    current_summary = state.get("summary", "") or ""
-    last_bot_reply = state.get("last_bot_reply", "") or ""
+    client = state.get("client")
+    booking_tool = create_booking_tool(client)     # ← هنا جوه الـ function
+    llm_with_tools = llm.bind_tools([booking_tool])
+    current_summary = state.get("summary") or ""
+    last_bot_reply = state.get("last_bot_reply") or ""
+    lead = state.get("lead") or {}
 
-    # جيب الوظايف مباشرة
-    jobs = get_jobs()
-    print(f"[HR Agent] Jobs fetched: {jobs[:100]}...")
 
     messages = [
         SystemMessage(
-            content=SYSTEM_PROMPT.replace("{jobs}", jobs)
+            content=SYSTEM_PROMPT
             + f"\n\n====================\nCONVERSATION CONTEXT\n====================\n"
             + f"Previous summary:\n{current_summary}\n\n"
-            + f"Last bot reply:\n{last_bot_reply}\n"
+            + f"Last bot reply:\n{last_bot_reply}\n\n"
+            + f"Already collected info:\n{lead}\n"
             + "===================="
-        ),
+        ),  
         HumanMessage(content=user_message)
     ]
 
-    response = llm.invoke(messages)
-    content = response.content
+    response = llm_with_tools.invoke(messages)
+
+    if getattr(response, "tool_calls", None):
+        messages.append(response)
+
+        for tool_call in response.tool_calls:
+            print(f"🔧 Tool used: {tool_call['name']}")
+            tool_result = booking_tool.invoke(tool_call["args"])
+            messages.append(ToolMessage(
+                content=str(tool_result),
+                tool_call_id=tool_call["id"]
+            ))
+
+        args = response.tool_calls[0]["args"]
+        lang = "ar" if any("\u0600" <= c <= "\u06ff" for c in state["messages"][-1].content) else "en"
+        if lang == "ar":
+            content = f"✅ تم تأكيد حجزك!\n\n📅 اليوم: {args.get('day')}\n⏰ الوقت: {args.get('time')}\n📞 الهاتف: {args.get('phone_number')}\n📝 الموضوع: {args.get('description', 'غير محدد')}"
+        else:
+            content = f"✅ Your booking is confirmed!\n\n📅 Day: {args.get('day')}\n⏰ Time: {args.get('time')}\n📞 Phone: {args.get('phone_number')}\n📝 Topic: {args.get('description', 'Not specified')}"    
+        booking_stage = "confirmed"
+    else:
+        content = response.content
+        booking_stage = "collecting"
 
     # =========================
     # Extract SUMMARY
@@ -165,8 +162,7 @@ def hr_agent_node(state: AgentState) -> AgentState:
     # =========================
     reply_match = re.search(r"<LAST_BOT_REPLY>(.*?)</LAST_BOT_REPLY>", content, re.DOTALL)
     last_reply = reply_match.group(1).strip() if reply_match else ""
-   
-
+  
     # =========================
     # Update Database (MemoryService)
     # =========================
@@ -182,16 +178,17 @@ def hr_agent_node(state: AgentState) -> AgentState:
     # Clean response for user
     # =========================
     
-    print("[HR Agent] responded ✅")
+
+    print(f"[Booking Node] responded ✅ | stage={booking_stage}")
+
     print(f"🔢 Tokens: input={response.usage_metadata['input_tokens']} | output={response.usage_metadata['output_tokens']} | total={response.usage_metadata['total_tokens']}")
     
 
-    
-    
-    # Return updated state
     return {
         **state,
         "messages": [AIMessage(content=last_reply)],
         "summary": new_summary,
-        "last_bot_reply": last_reply
+        "last_bot_reply": last_reply,
+         "booking_stage": "done" if booking_stage == "confirmed" else "collecting",
+        "lead": {} if booking_stage == "confirmed" else state.get("lead", {})
     }
