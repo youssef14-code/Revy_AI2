@@ -62,6 +62,27 @@ def delete_job(job_id):
     db.session.commit()
     return jsonify({"message": "deleted ✅"})
 
+@app.route("/appointments")
+def appointments_page():
+    return render_template("appointments.html")
+
+
+# جيب كل الحجوزات
+@app.route("/api/appointments", methods=["GET"])
+def get_appointments():
+    appts = Appointment.query.order_by(Appointment.created_at.desc()).all()
+    return jsonify([{
+        "id":           a.id,
+        "name":         a.name,
+        "phone_number": a.phone_number,
+        "day":          a.day,
+        "time":         a.time,
+        "description":  a.description,
+        "client_id":    a.client_id,
+        "created_at":   a.created_at.isoformat() if a.created_at else None
+    }
+        for a in appts
+    ])
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()

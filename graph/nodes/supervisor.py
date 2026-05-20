@@ -5,13 +5,16 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from state.state import AgentState
 from langchain_openai import ChatOpenAI
 from graph.nodes.base import safe_invoke
+from dotenv import load_dotenv
+
+load_dotenv()
 
 llm = ChatOpenAI(
-    model="google/gemini-2.0-flash-001",
+    model="google/gemini-2.5-flash-lite-preview-09-2025",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-    max_tokens=1024
+    api_key="OPENROUTER_API_KEY",
+    max_tokens=1700
 )
 
 SYSTEM_PROMPT = """
@@ -106,11 +109,16 @@ Last bot reply:
 
 
 
+
 @safe_invoke
 def intent_node(state: AgentState) -> AgentState:
+    user_message = state["messages"][-1].content
+    summary = state.get("summary") or ""
+    last_bot_reply = state.get("last_bot_reply") or ""
+    prompt = SYSTEM_PROMPT.replace("{summary}", summary).replace("{last_bot_reply}", last_bot_reply)
+
+    # exit keywords check
     if state.get("booking_stage") == "collecting":
-        user_message = state["messages"][-1].content
-        # كلمات بتخرج من الـ booking flow
         exit_keywords = ["cancel", "never mind", "forget it", "إلغاء", "مش عايز", "خلاص"]
         if any(word in user_message.lower() for word in exit_keywords):
             print(f"[Supervisor] → exiting booking flow")
@@ -120,16 +128,8 @@ def intent_node(state: AgentState) -> AgentState:
                 "booking_stage": None,
                 "lead": {}
             }
-    
-        print(f"[Supervisor] → booking (continuing) | lead={state.get('lead', {})}")
-        return {**state, "next_agent": "booking"}
-    
 
-    user_message = state["messages"][-1].content
-    summary = state.get("summary") or ""
-    last_bot_reply = state.get("last_bot_reply") or ""
-    prompt = SYSTEM_PROMPT.replace("{summary}", summary).replace("{last_bot_reply}", last_bot_reply)
-    
+    # LLM call دايماً بتحصل
     try:
         response = llm.invoke([
             SystemMessage(content=prompt),
@@ -140,26 +140,31 @@ def intent_node(state: AgentState) -> AgentState:
         data = json.loads(match.group()) if match else {}
     except Exception:
         data = {}
-##
-    intent = data.get("intent", "other")
 
-    # ← الـ routing هنا
+    intent = data.get("intent", "other")
     raw_agent = data.get("next_agent", "sales_cs")
-    if raw_agent == "hr":
+
+    # routing
+    if state.get("booking_stage") == "collecting":
+        next_agent = "booking"  # ← لو في booking flow، روح booking دايماً
+    elif raw_agent == "hr":
         next_agent = "hr"
     elif raw_agent == "booking" or intent == "booking":
-        next_agent = "booking"    
+        next_agent = "booking"
     elif raw_agent == "direct" or intent in ["greeting", "other"]:
         next_agent = "direct"
     else:
         next_agent = "sales_cs"
 
-    lead_info = data.get("lead_info", {})
-    existing_lead = state.get("lead", {})
+    # lead merge
+    lead_info = data.get("lead_info") or {}
+    existing_lead = dict(state.get("lead") or {})
     refined_query = data.get("refined_query") or ""
+
     for key in ["name", "phone", "day", "time", "topic"]:
-        if lead_info.get(key):
-            existing_lead[key] = lead_info[key]
+        val = lead_info.get(key)
+        if val:
+            existing_lead[key] = val
 
     print(f"[Supervisor] → {next_agent} | intent={intent} | lead={existing_lead}")
 

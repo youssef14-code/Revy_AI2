@@ -10,14 +10,17 @@ from app import app
 from models.models import Job
 from langchain_openai import ChatOpenAI
 from graph.nodes.base import safe_invoke
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 llm = ChatOpenAI(
-    model="google/gemini-2.0-flash-001",
+    model="google/gemini-2.5-flash-lite-preview-09-2025",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="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",
-    max_tokens=1024
+    api_key="OPENROUTER_API_KEY",
+    max_tokens=1700
 )
 
 def get_jobs() -> str:
@@ -93,12 +96,31 @@ You MUST include the following tags at the END of your response.
 DO NOT skip them.
 
 <LAST_BOT_REPLY>
-[Repeat your full conversational reply to the user here]
+[Your reply to the user. This will be used as context in the next conversation turn.]
 </LAST_BOT_REPLY>
 
 <SUMMARY>
-[Update the summary of the entire conversation so far, including the latest interaction. Keep it to 2-3 lines.]
+[Cumulative conversation summary. STRICT RULES:
+1. Build on the previous summary — copy it first, then update only what changed
+2. Always capture in this structure:
+   - User Info: any personal details mentioned (name, phone, company, role, etc.)
+   - Intent: what the user is trying to accomplish
+   - Key Points: important topics, questions, or concerns raised
+   - Status: what just happened + what is still pending
+3. Extract User Info from ANY message — not just booking context
+4. Use English regardless of conversation language.]
 </SUMMARY>
+
+<LEAD_INFO>
+[Structured lead data. STRICT RULES:
+1. Continuously collect and update fields as the user provides information
+2. Never remove or overwrite existing data unless the user explicitly corrects it
+3. After booking is CONFIRMED:
+   - Move essential info (name, phone, email, booking reference) to SUMMARY under "Retained Info"
+   - Then CLEAR all fields in this section and replace with: "✅ Booking confirmed — lead data cleared."]
+</LEAD_INFO>
+
+===============
 
 ====================
 LANGUAGE PROTOCOL
@@ -143,7 +165,7 @@ def hr_agent_node(state: AgentState) -> AgentState:
     # =========================
     reply_match = re.search(r"<LAST_BOT_REPLY>(.*?)</LAST_BOT_REPLY>", content, re.DOTALL)
     last_reply = reply_match.group(1).strip() if reply_match else ""
-
+   
 
     # =========================
     # Update Database (MemoryService)
@@ -156,24 +178,20 @@ def hr_agent_node(state: AgentState) -> AgentState:
             summary=new_summary,
             last_reply=last_reply
         )
-
-    print("[HR Agent] responded ✅")
-
-
     # =========================
     # Clean response for user
     # =========================
-    clean_reply = re.sub(r"<SUMMARY>.*?</SUMMARY>", "", content, flags=re.DOTALL)
-    clean_reply = re.sub(r"<LAST_BOT_REPLY>.*?</LAST_BOT_REPLY>", "", clean_reply, flags=re.DOTALL).strip()
     
-    # Fallback if cleaning removed everything
-    if not clean_reply and last_reply:
-        clean_reply = last_reply
+    print("[HR Agent] responded ✅")
+    print(f"🔢 Tokens: input={response.usage_metadata['input_tokens']} | output={response.usage_metadata['output_tokens']} | total={response.usage_metadata['total_tokens']}")
+    
 
+    
+    
     # Return updated state
     return {
         **state,
-        "messages": [AIMessage(content=clean_reply)],
+        "messages": [AIMessage(content=last_reply)],
         "summary": new_summary,
         "last_bot_reply": last_reply
     }

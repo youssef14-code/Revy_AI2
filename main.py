@@ -47,5 +47,5 @@ with app.app_context():
             # ← ضيف دي
         if current_state.get("booking_stage") == "confirmed":
             current_state["booking_stage"] = None
-            current_state["lead"] = {}  # امسح الـ lead كمان
+            current_state["lead"] = {} 
             print("[DEBUG] Booking stage reset ✅")

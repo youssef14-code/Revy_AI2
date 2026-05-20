@@ -20,4 +20,4 @@ class AgentState(TypedDict):
     summary: Optional[str]
     last_bot_reply: Optional[str]
     
-    booking_stage: Optional[str]  # None | collecting | confirmed
+    booking_stage: Optional[str]  
