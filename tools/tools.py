@@ -2,15 +2,15 @@ from langchain_core.tools import tool
 from tools.services import BookingService, MemoryService
 from retrival.retriever import RetrievalService
 
-def create_booking_tool(client):  # ← رجّع user هنا
+def create_booking_tool(client): 
     
     @tool
     def book_appointment(
         name: str,
-        day: str,        # ← بدل appointment_date
-        time: str,       # ← ضيف time
+        day: str,        
+        time: str,       
         phone_number: str,
-        description: str = ""  # ← بدل service_name
+        description: str = ""  
     ) -> dict:
         """
         Book a business appointment or meeting for a client.
@@ -18,7 +18,7 @@ def create_booking_tool(client):  # ← رجّع user هنا
         Fields needed: day, time, phone_number, and optionally description (e.g. 'AI Agent consultation', 'Business meeting').
         """
         result = BookingService.book(
-            client=client,         # ← ضيف user
+                     # ← ضيف user
             name=name,
             day=day,
             time=time,

@@ -49,9 +49,25 @@
 
   .logo span { color: var(--accent); }
 
-  .header-meta {
+  .header-nav { display: flex; gap: 8px; }
+
+  .nav-link {
+    padding: 7px 16px;
+    border-radius: 8px;
     font-size: 13px;
+    font-weight: 400;
     color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  .nav-link:hover { color: var(--text); border-color: var(--border); }
+
+  .nav-link.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border-color: rgba(200,240,76,0.25);
   }
 
   /* ── Layout ── */
@@ -376,11 +392,10 @@
 
 <header>
   <div class="logo">Revy <span>HR</span></div>
-  <div class="header-meta">Jobs Management</div>
-<<<<<<< HEAD
-=======
-   <a href="/appointments" class="nav-link">Appointments</a>
->>>>>>> Edits
+  <nav class="header-nav">
+    <a href="/" class="nav-link active">Jobs</a>
+    <a href="/appointments" class="nav-link">Appointments</a>
+  </nav>
 </header>
 
 <main>

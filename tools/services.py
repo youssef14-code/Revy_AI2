@@ -5,13 +5,12 @@ from app import app
 
 class BookingService:
     @staticmethod
-    def book(client: Client, name: str, day: str, time: str, phone_number: str, description: str = ""):
+    def book(name: str, day: str, time: str, phone_number: str, description: str = ""):
         with app.app_context():
-        # Check if appointment already exists
+            date_str = f"{day} {time}"  # "March 15 10 AM"
+            
             existing = Appointment.query.filter_by(
-                client_id=client.id,
-                day=day,
-                time=time,
+                date=date_str,
                 phone_number=phone_number
             ).first()
 
@@ -19,17 +18,13 @@ class BookingService:
                 print("⚠️ Appointment already exists")
                 return False
 
-            
-
             try:
                 new_appointment = Appointment(
-                client_id=client.id,
-                name=client.name,
-                day=day,
-                time=time,
-                phone_number=phone_number,
-                description=description
-                 )
+                    name=name,
+                    date=date_str,
+                    phone_number=phone_number,
+                    description=description
+                )
                 db.session.add(new_appointment)
                 db.session.commit()
                 print("✅ Appointment saved successfully")
@@ -38,8 +33,6 @@ class BookingService:
                 db.session.rollback()
                 print(f"❌ BookingService DB Error: {e}")
                 return False
-
-
 class MemoryService:
     @staticmethod
     def update(client: Client, summary: str, last_reply: str):
@@ -50,6 +43,9 @@ class MemoryService:
                     fresh_client.summary = summary or ""
                     fresh_client.last_bot_reply = last_reply
                     db.session.commit()
+                    print("✅ Memory updated successfully")
+                else:
+                    print(f"❌ MemoryService: Client id={client.id} not found")
             except Exception as e:
                 db.session.rollback()
                 print(f"❌ MemoryService DB Error: {e}")

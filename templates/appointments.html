@@ -31,6 +31,7 @@
     min-height: 100vh;
   }
 
+  /* ── Header ── */
   header {
     padding: 32px 48px 24px;
     border-bottom: 1px solid var(--border);
@@ -69,6 +70,7 @@
     border-color: rgba(200,240,76,0.25);
   }
 
+  /* ── Layout ── */
   main {
     max-width: 1100px;
     margin: 0 auto;
@@ -97,6 +99,7 @@
     margin-top: 4px;
   }
 
+  /* ── Search ── */
   .search-wrap { position: relative; }
 
   .search-wrap svg {
@@ -124,6 +127,7 @@
   .search-input:focus { border-color: var(--accent); }
   .search-input::placeholder { color: var(--text-muted); }
 
+  /* ── Stats ── */
   .stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -154,6 +158,7 @@
 
   .stat-value.accent { color: var(--accent); }
 
+  /* ── Filters ── */
   .filters {
     display: flex;
     gap: 8px;
@@ -178,6 +183,7 @@
     color: var(--accent);
   }
 
+  /* ── Table ── */
   .table-wrap {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -248,7 +254,27 @@
 
   .created-at { font-size: 12px; color: var(--text-muted); }
 
-  /* Modal */
+  /* ── Buttons ── */
+  .btn {
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* ── Modal ── */
   .modal-overlay {
     display: none;
     position: fixed;
@@ -330,25 +356,7 @@
     margin-top: 24px;
   }
 
-  .btn {
-    border: none;
-    cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 10px 20px;
-    border-radius: 8px;
-    transition: all 0.2s;
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-  }
-
-  .btn-ghost:hover { border-color: var(--text-muted); color: var(--text); }
-
+  /* ── Empty ── */
   .empty {
     text-align: center;
     padding: 60px 20px;
@@ -356,6 +364,7 @@
     font-size: 14px;
   }
 
+  /* ── Toast ── */
   .toast {
     position: fixed;
     bottom: 32px;
@@ -375,6 +384,7 @@
 
   .toast.show { opacity: 1; transform: translateY(0); }
 
+  /* ── Pagination ── */
   .pagination {
     display: flex;
     align-items: center;
@@ -431,6 +441,7 @@
     </div>
   </div>
 
+  <!-- Stats -->
   <div class="stats">
     <div class="stat-card">
       <div class="stat-label">Total Appointments</div>
@@ -446,12 +457,14 @@
     </div>
   </div>
 
+  <!-- Filters -->
   <div class="filters">
     <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
     <button class="filter-btn" onclick="setFilter('today', this)">Today</button>
     <button class="filter-btn" onclick="setFilter('week', this)">This Week</button>
   </div>
 
+  <!-- Table -->
   <div class="table-wrap">
     <table>
       <thead>
@@ -524,7 +537,7 @@
 
   async function loadAppointments() {
     try {
-      const res = await fetch('/api/appointments');
+      const res = await fetch('/appointments/data');
       allAppts  = await res.json();
       updateStats();
       applyFilters();
@@ -535,7 +548,7 @@
   }
 
   function updateStats() {
-    const todayCount = allAppts.filter(a => isToday(a.day)).length;
+    const todayCount    = allAppts.filter(a => isToday(a.day)).length;
     const uniqueClients = new Set(allAppts.map(a => a.client_id)).size;
 
     document.getElementById('stat-total').textContent   = allAppts.length;
@@ -543,16 +556,14 @@
     document.getElementById('stat-clients').textContent = uniqueClients;
   }
 
-  // الأيام العربية الشائعة اللي البوت بيكتبها
-  const TODAY_KEYWORDS  = ['اليوم', 'النهارده', 'هذا اليوم'];
+  const TODAY_KEYWORDS    = ['اليوم', 'النهارده', 'هذا اليوم'];
   const TOMORROW_KEYWORDS = ['غدا', 'غداً', 'بكرة', 'بكره'];
-  const ARABIC_DAYS = ['الأحد','الإثنين','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const ARABIC_DAYS       = ['الأحد','الإثنين','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 
   function isToday(day) {
     if (!day) return false;
     const d = day.trim();
     if (TODAY_KEYWORDS.some(k => d.includes(k))) return true;
-    // لو بالإنجليزي
     const engToday = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     return d === engToday;
   }
@@ -560,7 +571,6 @@
   function isThisWeek(day) {
     if (!day) return false;
     const d = day.trim();
-    // لو فيه "القادم" أو "الأسبوع القادم" يبقى مش الأسبوع ده
     if (d.includes('القادم') || d.includes('القادمة')) return false;
     if (isToday(d) || TOMORROW_KEYWORDS.some(k => d.includes(k))) return true;
     return ARABIC_DAYS.some(k => d.includes(k));

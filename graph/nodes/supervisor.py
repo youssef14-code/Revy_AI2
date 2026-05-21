@@ -1,6 +1,6 @@
 # graph/nodes/intent_node.py
 
-import json, re
+import json, re ,os
 from langchain_core.messages import SystemMessage, HumanMessage
 from state.state import AgentState
 from langchain_openai import ChatOpenAI
@@ -13,7 +13,7 @@ llm = ChatOpenAI(
     model="google/gemini-2.5-flash-lite-preview-09-2025",
     temperature=0,
     base_url="https://openrouter.ai/api/v1",
-    api_key="OPENROUTER_API_KEY",
+    api_key=os.getenv("OPENROUTER_API_KEY"),
     max_tokens=1700
 )
 

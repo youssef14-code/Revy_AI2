@@ -8,15 +8,15 @@ from models.models import Client
 from tools.services import MemoryService
 from graph.nodes.base import safe_invoke
 from dotenv import load_dotenv
-
+import os
 load_dotenv()
 
 
 llm = ChatOpenAI(
     model="google/gemini-2.5-flash-lite-preview-09-2025",
     temperature=0,
-    base_url="https://openrouter.ai/api/v1",
-    api_key="OPENROUTER_API_KEY",
+   base_url="https://openrouter.ai/api/v1",
+   api_key=os.getenv("OPENROUTER_API_KEY"),
     max_tokens=1700
 )
 
